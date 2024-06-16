@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
+	"github.com/gavincarr/go-slip39"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -22,6 +24,10 @@ var (
 
 type Context struct {
 	Verbose bool
+}
+
+type ParseCmd struct {
+	Share []string `arg help:"Slip39 share mnemonic" required`
 }
 
 type SeedEntropyCmd struct {
@@ -43,6 +49,8 @@ type EntropySharesCmd struct {
 var cli struct {
 	Verbose bool `help:"Enable verbose mode."`
 
+	//Parse ParseCmd `cmd help:"Parse a BIP39 mnemonic seed phrase or a SLIP39 share"`
+	Parse         ParseCmd         `cmd help:"Parse a SLIP39 share"`
 	SeedEntropy   SeedEntropyCmd   `cmd help:"Convert the given BIP39 mnemonic seed phrase to a hex-encoded entropy string"`
 	EntropySeed   EntropySeedCmd   `cmd help:"Convert the given hex-encoded entropy string to a BIP39 mnemonic seed phrase"`
 	SharesEntropy SharesEntropyCmd `cmd help:"Convert the given SLIP39 shares (stdin, one per line) to a hex-encoded entropy string"`
@@ -52,6 +60,20 @@ var cli struct {
 type groupStruct struct {
 	Threshold    int
 	NumberShares int
+}
+
+func (c ParseCmd) Run(ctx *Context) error {
+	mnemonic := strings.Join(c.Share, " ")
+	s, err := slip39.ParseShare(mnemonic)
+	if err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(data))
+	return nil
 }
 
 func (c SeedEntropyCmd) Run(ctx *Context) error {
