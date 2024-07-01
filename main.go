@@ -49,8 +49,11 @@ type ParseCmd struct {
 }
 
 type BipSlipCmd struct {
-	Groups []string `flag short:"g" long:"group" help:"Group definitions, as \"MofN\" strings e.g. 2of4, 3of5, etc." required`
-	Seed   []string `arg help:"BIP39 mnemonic seed phrase" optional`
+	GroupThreshold  int      `flag short:"t" long:"threshold" help:"Group threshold (the number of groups required to combine)" default:"1"`
+	Groups          []string `flag short:"g" long:"group" help:"Group definitions, as \"MofN\" strings e.g. 2of4, 3of5, etc. (repeatable)" required`
+	EngravingFormat bool     `flag short:"e" long:"engraving" help:"output in 'engraving' format, one numbered word per line"`
+
+	Seed []string `arg help:"BIP39 mnemonic seed phrase" optional`
 }
 
 type SlipBipCmd struct {
@@ -74,8 +77,8 @@ type EntropySlipCmd struct {
 	Groups  []string `arg help:"Group definitions, as \"MofN\" strings e.g. 2of4, 3of5, etc." required`
 }
 
-func (c ParseCmd) Run(ctx *Context) error {
-	mnemonic := strings.Join(c.Share, " ")
+func (cmd ParseCmd) Run(ctx *Context) error {
+	mnemonic := strings.Join(cmd.Share, " ")
 	s, err := slip39.ParseShare(mnemonic)
 	if err != nil {
 		return err
@@ -88,8 +91,35 @@ func (c ParseCmd) Run(ctx *Context) error {
 	return nil
 }
 
-func (c BipSlipCmd) Run(ctx *Context) error {
-	mnemonic, err := readMnemonic(c.Seed)
+func (cmd BipSlipCmd) outputShareGroups(shareGroups [][]string) error {
+	groupCount := len(shareGroups)
+	for g, shares := range shareGroups {
+		for s, share := range shares {
+			// Standard format
+			if !cmd.EngravingFormat {
+				fmt.Println(share)
+				continue
+			}
+
+			// Engraving format
+			words, err := slip39.SplitMnemonicWords(share)
+			if err != nil {
+				return fmt.Errorf("splitting share %q words: %w", share, err)
+			}
+			for w, word := range words {
+				if groupCount == 1 {
+					fmt.Printf("%d%02d %s\n", s+1, w+1, word)
+				} else {
+					fmt.Printf("%d%d%02d %s\n", g+1, s+1, w+1, word)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (cmd BipSlipCmd) Run(ctx *Context) error {
+	mnemonic, err := readMnemonic(cmd.Seed)
 	if err != nil {
 		return err
 	}
@@ -99,27 +129,26 @@ func (c BipSlipCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	groups, err := parseGroups(c.Groups)
+	groups, err := parseGroups(cmd.Groups)
 	if err != nil {
 		return err
 	}
 
 	passphrase := []byte{}
 	shareGroups, err := slip39.GenerateMnemonicsWithPassphrase(
-		1, groups, entropy, passphrase,
+		cmd.GroupThreshold, groups, entropy, passphrase,
 	)
 
-	for _, shares := range shareGroups {
-		for _, s := range shares {
-			fmt.Println(s)
-		}
+	err = cmd.outputShareGroups(shareGroups)
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (c SlipBipCmd) Run(ctx *Context) error {
-	mnemonics, err := readShareMnemonics(c.Shares)
+func (cmd SlipBipCmd) Run(ctx *Context) error {
+	mnemonics, err := readShareMnemonics(cmd.Shares)
 	if err != nil {
 		return err
 	}
@@ -137,8 +166,8 @@ func (c SlipBipCmd) Run(ctx *Context) error {
 	return nil
 }
 
-func (c BipEntropyCmd) Run(ctx *Context) error {
-	mnemonic, err := readMnemonic(c.Seed)
+func (cmd BipEntropyCmd) Run(ctx *Context) error {
+	mnemonic, err := readMnemonic(cmd.Seed)
 	if err != nil {
 		return err
 	}
@@ -150,10 +179,10 @@ func (c BipEntropyCmd) Run(ctx *Context) error {
 	return nil
 }
 
-func (c EntropyBipCmd) Run(ctx *Context) error {
+func (cmd EntropyBipCmd) Run(ctx *Context) error {
 	var entropyString string
-	if len(c.Entropy) > 0 {
-		entropyString = c.Entropy
+	if len(cmd.Entropy) > 0 {
+		entropyString = cmd.Entropy
 	} else {
 		entropyBytes, err := io.ReadAll(os.Stdin)
 		if err != nil {
@@ -175,8 +204,8 @@ func (c EntropyBipCmd) Run(ctx *Context) error {
 	return nil
 }
 
-func (c SlipEntropyCmd) Run(ctx *Context) error {
-	mnemonics, err := readShareMnemonics(c.Shares)
+func (cmd SlipEntropyCmd) Run(ctx *Context) error {
+	mnemonics, err := readShareMnemonics(cmd.Shares)
 	if err != nil {
 		return err
 	}
@@ -189,18 +218,18 @@ func (c SlipEntropyCmd) Run(ctx *Context) error {
 	return nil
 }
 
-func (c EntropySlipCmd) Run(ctx *Context) error {
+func (cmd EntropySlipCmd) Run(ctx *Context) error {
 	// TODO
-	_, err := hex.DecodeString(c.Entropy)
-	//entropy, err := hex.DecodeString(c.Entropy)
+	_, err := hex.DecodeString(cmd.Entropy)
+	//entropy, err := hex.DecodeString(cmd.Entropy)
 	if err != nil {
 		return err
 	}
-	groups, err := parseGroups(c.Groups)
+	groups, err := parseGroups(cmd.Groups)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("entropy %s, groups %v\n", c.Entropy, groups)
+	fmt.Printf("entropy %s, groups %v\n", cmd.Entropy, groups)
 	return nil
 }
 
