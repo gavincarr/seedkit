@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -28,24 +29,30 @@ var (
 )
 
 var cli struct {
-	Verbose    bool   `short:"v" help:"Enable verbose mode."`
+	Verbose    int    `flag type:"counter" short:"v" help:"enable verbose mode"`
 	Passphrase string `flag short:"p" long:"pass" help:"passphrase to use for BIP39 seeds and SLIP39 shares"`
-	//Parse ParseCmd `cmd help:"Parse a BIP39 mnemonic seed phrase or a SLIP39 share"`
-	Parse       ParseCmd       `cmd help:"Parse a SLIP39 share"`
-	BipSlip     BipSlipCmd     `cmd name:"bs" help:"Convert the given BIP39 mnemonic seed phrase to a set of SLIP39 shares"`
-	SlipBip     SlipBipCmd     `cmd name:"sb" help:"Convert the given SLIP39 mnemonic share phrase(s) to a BIP39 mnemonic"`
-	BipEntropy  BipEntropyCmd  `cmd name:"be" help:"Convert the given BIP39 mnemonic seed phrase to a hex-encoded entropy string"`
-	EntropyBip  EntropyBipCmd  `cmd name:"eb" help:"Convert the given hex-encoded entropy string to a BIP39 mnemonic seed phrase"`
-	SlipEntropy SlipEntropyCmd `cmd name:"se" help:"Convert the given SLIP39 shares to a hex-encoded entropy string"`
-	EntropySlip EntropySlipCmd `cmd name:"es" help:"Convert the given hex-encoded entropy string to a set of SLIP39 shares"`
+	//Parse ParseCmd `cmd help:"parse a BIP39 mnemonic seed phrase or a SLIP39 share"`
+	Parse       ParseCmd       `cmd help:"parse a SLIP39 share"`
+	ValBip      ValBipCmd      `cmd name:"vb" help:"validate the given BIP39 mnemonic seed phrase"`
+	BipSlip     BipSlipCmd     `cmd name:"bs" help:"convert the given BIP39 mnemonic seed phrase to a set of SLIP39 shares"`
+	SlipBip     SlipBipCmd     `cmd name:"sb" help:"convert the given SLIP39 mnemonic share phrase(s) to a BIP39 mnemonic"`
+	BipEntropy  BipEntropyCmd  `cmd name:"be" help:"convert the given BIP39 mnemonic seed phrase to a hex-encoded entropy string"`
+	EntropyBip  EntropyBipCmd  `cmd name:"eb" help:"convert the given hex-encoded entropy string to a BIP39 mnemonic seed phrase"`
+	SlipEntropy SlipEntropyCmd `cmd name:"se" help:"convert the given SLIP39 shares to a hex-encoded entropy string"`
+	EntropySlip EntropySlipCmd `cmd name:"es" help:"convert the given hex-encoded entropy string to a set of SLIP39 shares"`
 }
 
 type Context struct {
-	Verbose bool
+	Verbose int
 }
 
 type ParseCmd struct {
 	Share []string `arg help:"SLIP39 share mnemonic" required`
+}
+
+type ValBipCmd struct {
+	Quiet bool     `flag short:"q" long:"quiet" help:"suppress output, just set return code for result"`
+	Seed  []string `arg help:"BIP39 mnemonic seed phrase" optional`
 }
 
 type BipSlipCmd struct {
@@ -115,6 +122,27 @@ func (cmd BipSlipCmd) outputShareGroups(shareGroups [][]string) error {
 			}
 		}
 	}
+	return nil
+}
+
+func (cmd ValBipCmd) Run(ctx *Context) error {
+	mnemonic, err := readMnemonic(cmd.Seed)
+	if err != nil {
+		return err
+	}
+
+	ok := bip39.IsMnemonicValid(mnemonic)
+	if !ok {
+		if cmd.Quiet {
+			os.Exit(2)
+		}
+		return errors.New("invalid mnemonic")
+	}
+
+	if !cmd.Quiet {
+		fmt.Println("Mnemonic is good")
+	}
+
 	return nil
 }
 
@@ -313,7 +341,9 @@ func parseGroups(groupstr []string) ([]slip39.MemberGroupParameters, error) {
 func runCLI() error {
 	ctx := kong.Parse(&cli)
 	level := slog.LevelWarn
-	if cli.Verbose {
+	if cli.Verbose >= 2 {
+		level = slog.LevelDebug
+	} else if cli.Verbose == 1 {
 		level = slog.LevelInfo
 	}
 	slog.SetDefault(slog.New(

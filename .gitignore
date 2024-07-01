@@ -6,7 +6,7 @@
 /.env.local
 /.netrc
 /DevNotes
-/TODO
+/TODO*
 /c.out
 /data/*
 /delta/applied/*
