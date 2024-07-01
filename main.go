@@ -56,9 +56,9 @@ type ValBipCmd struct {
 }
 
 type BipSlipCmd struct {
-	GroupThreshold  int      `flag short:"t" long:"threshold" help:"Group threshold (the number of groups required to combine)" default:"1"`
-	Groups          []string `flag short:"g" long:"group" help:"Group definitions, as \"MofN\" strings e.g. 2of4, 3of5, etc. (repeatable)" required`
-	EngravingFormat bool     `flag short:"e" long:"engraving" help:"output in 'engraving' format, one numbered word per line"`
+	GroupThreshold int      `flag short:"t" long:"threshold" help:"Group threshold (the number of groups required to combine)" default:"1"`
+	Groups         []string `flag short:"g" long:"group" help:"Group definitions, as \"MofN\" strings e.g. 2of4, 3of5, etc. (repeatable)" required`
+	Label          bool     `flag short:"l" long:"label" help:"output in 'label' format, with one numbered word per line"`
 
 	Seed []string `arg help:"BIP39 mnemonic seed phrase" optional`
 }
@@ -95,33 +95,6 @@ func (cmd ParseCmd) Run(ctx *Context) error {
 		return err
 	}
 	fmt.Println(string(data))
-	return nil
-}
-
-func (cmd BipSlipCmd) outputShareGroups(shareGroups [][]string) error {
-	groupCount := len(shareGroups)
-	for g, shares := range shareGroups {
-		for s, share := range shares {
-			// Standard format
-			if !cmd.EngravingFormat {
-				fmt.Println(share)
-				continue
-			}
-
-			// Engraving format
-			words, err := slip39.SplitMnemonicWords(share)
-			if err != nil {
-				return fmt.Errorf("splitting share %q words: %w", share, err)
-			}
-			for w, word := range words {
-				if groupCount == 1 {
-					fmt.Printf("%d%02d %s\n", s+1, w+1, word)
-				} else {
-					fmt.Printf("%d%d%02d %s\n", g+1, s+1, w+1, word)
-				}
-			}
-		}
-	}
 	return nil
 }
 
@@ -167,9 +140,14 @@ func (cmd BipSlipCmd) Run(ctx *Context) error {
 		cmd.GroupThreshold, groups, entropy, passphrase,
 	)
 
-	err = cmd.outputShareGroups(shareGroups)
-	if err != nil {
-		return err
+	if cmd.Label {
+		output, err := shareGroups.StringLabelled()
+		if err != nil {
+			return err
+		}
+		fmt.Print(output)
+	} else {
+		fmt.Print(shareGroups.String())
 	}
 
 	return nil
