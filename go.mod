@@ -13,6 +13,7 @@ require (
 
 require (
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
 )

@@ -33,7 +33,7 @@ var (
 )
 
 var cli struct {
-	Verbose      int             `flag type:"counter" short:"v" help:"enable verbose mode"`
+	verbose      int             `flag type:"counter" short:"v" help:"enable verbose mode"`
 	Passphrase   string          `flag short:"p" long:"pass" help:"passphrase to use for BIP39 seeds and SLIP39 shares"`
 	BipCheckword BipCheckwordCmd `cmd name:"bc" help:"generate one or more final checksum words for a BIP39 partial mnemonic"`
 	ValBip       ValBipCmd       `cmd name:"vb" help:"validate the given BIP39 mnemonic seed phrase"`
@@ -48,11 +48,13 @@ var cli struct {
 }
 
 type Context struct {
-	Verbose int
+	verbose int
+	writer  io.Writer
 }
 
 type BipCheckwordCmd struct {
 	Multi         bool `flag short:"m"  help:"output all valid mnemonics for the given partial seed, not just one" xor:"flags"`
+	Word          bool `flag short:"w" help:"output just the final checksum word(s), not the full mnemonic"`
 	Deterministic bool `flag short:"d"  help:"always use the first checksum word found (for testing)" xor:"flags"`
 
 	PartialMnemonic []string `arg help:"BIP39 partial mnemonic seed phrase (11 or 23 words)" optional`
@@ -129,7 +131,11 @@ func (cmd BipCheckwordCmd) Run(ctx *Context) error {
 		// Output
 		for _, w := range checksumWords {
 			seed := strings.Join(append(partialWords, w), " ")
-			fmt.Println(seed)
+			if cmd.Word {
+				fmt.Fprintln(ctx.writer, w)
+			} else {
+				fmt.Fprintln(ctx.writer, seed)
+			}
 		}
 		return nil
 	}
@@ -137,14 +143,18 @@ func (cmd BipCheckwordCmd) Run(ctx *Context) error {
 	// Select, validate, and output using a random checksum word
 	i := 0
 	if !cmd.Deterministic {
-		rand.Intn(len(checksumWords))
+		i = rand.Intn(len(checksumWords))
 	}
 	seed := strings.Join(append(partialWords, checksumWords[i]), " ")
 	ok := bip39.IsMnemonicValid(seed)
 	if !ok {
 		return fmt.Errorf("generated invalid mnemonic: %q", seed)
 	}
-	fmt.Println(seed)
+	if cmd.Word {
+		fmt.Fprintln(ctx.writer, checksumWords[i])
+	} else {
+		fmt.Fprintln(ctx.writer, seed)
+	}
 
 	return nil
 }
@@ -325,7 +335,7 @@ func readMnemonic(args []string) (string, error) {
 			return "", err
 		}
 	}
-	slog.Info("readMnemonic", "mnemonic", mnemonic)
+	//slog.Info("readMnemonic", "mnemonic", mnemonic)
 	return mnemonic, nil
 }
 
@@ -386,12 +396,12 @@ func bip39ChecksumWords(partialWords []string) ([]string, error) {
 	entropyToFill := 11 - checksumBits
 	entropyBase := entropy.Lsh(entropy, uint(entropyToFill))
 
-	// Generate all possible checksum words
+	// Generate the full set of possible checksum words
 	iterations := int(math.Pow(2, float64(entropyToFill)))
 	checksums := make([]string, 0, iterations)
-	buf := make([]byte, entropySize)
 	wordlist := bip39.GetWordList()
 	entropyCandidate := entropyBase
+	buf := make([]byte, entropySize)
 	for i := range iterations {
 		entropyBytes := entropyCandidate.FillBytes(buf)
 		h := sha256.New()
@@ -431,12 +441,12 @@ func parseGroups(groupstr []string) ([]slip39.MemberGroupParameters, error) {
 	return groups, nil
 }
 
-func runCLI() error {
+func runCLI(wtr io.Writer) error {
 	ctx := kong.Parse(&cli)
 	level := slog.LevelWarn
-	if cli.Verbose >= 2 {
+	if cli.verbose >= 2 {
 		level = slog.LevelDebug
-	} else if cli.Verbose == 1 {
+	} else if cli.verbose == 1 {
 		level = slog.LevelInfo
 	}
 	slog.SetDefault(slog.New(
@@ -445,11 +455,11 @@ func runCLI() error {
 			TimeFormat: " ",
 		}),
 	))
-	return ctx.Run(&Context{Verbose: cli.Verbose})
+	return ctx.Run(&Context{writer: wtr, verbose: cli.verbose})
 }
 
 func main() {
-	err := runCLI()
+	err := runCLI(os.Stdout)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error: "+err.Error())
 		os.Exit(2)
