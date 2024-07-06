@@ -2,12 +2,16 @@ package main
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
+	"math/big"
+	"math/rand"
 	"os"
 	"regexp"
 	"strconv"
@@ -29,25 +33,29 @@ var (
 )
 
 var cli struct {
-	Verbose    int    `flag type:"counter" short:"v" help:"enable verbose mode"`
-	Passphrase string `flag short:"p" long:"pass" help:"passphrase to use for BIP39 seeds and SLIP39 shares"`
+	Verbose      int             `flag type:"counter" short:"v" help:"enable verbose mode"`
+	Passphrase   string          `flag short:"p" long:"pass" help:"passphrase to use for BIP39 seeds and SLIP39 shares"`
+	BipCheckword BipCheckwordCmd `cmd name:"bc" help:"generate one or more final checksum words for a BIP39 partial mnemonic"`
+	ValBip       ValBipCmd       `cmd name:"vb" help:"validate the given BIP39 mnemonic seed phrase"`
+	BipSlip      BipSlipCmd      `cmd name:"bs" help:"convert the given BIP39 mnemonic seed phrase to a set of SLIP39 shares"`
+	SlipBip      SlipBipCmd      `cmd name:"sb" help:"convert the given SLIP39 mnemonic share phrase(s) to a BIP39 mnemonic"`
+	BipEntropy   BipEntropyCmd   `cmd name:"be" help:"convert the given BIP39 mnemonic seed phrase to a hex-encoded entropy string"`
+	EntropyBip   EntropyBipCmd   `cmd name:"eb" help:"convert the given hex-encoded entropy string to a BIP39 mnemonic seed phrase"`
+	SlipEntropy  SlipEntropyCmd  `cmd name:"se" help:"convert the given SLIP39 shares to a hex-encoded entropy string"`
+	EntropySlip  EntropySlipCmd  `cmd name:"es" help:"convert the given hex-encoded entropy string to a set of SLIP39 shares"`
 	//Parse ParseCmd `cmd help:"parse a BIP39 mnemonic seed phrase or a SLIP39 share"`
-	Parse       ParseCmd       `cmd help:"parse a SLIP39 share"`
-	ValBip      ValBipCmd      `cmd name:"vb" help:"validate the given BIP39 mnemonic seed phrase"`
-	BipSlip     BipSlipCmd     `cmd name:"bs" help:"convert the given BIP39 mnemonic seed phrase to a set of SLIP39 shares"`
-	SlipBip     SlipBipCmd     `cmd name:"sb" help:"convert the given SLIP39 mnemonic share phrase(s) to a BIP39 mnemonic"`
-	BipEntropy  BipEntropyCmd  `cmd name:"be" help:"convert the given BIP39 mnemonic seed phrase to a hex-encoded entropy string"`
-	EntropyBip  EntropyBipCmd  `cmd name:"eb" help:"convert the given hex-encoded entropy string to a BIP39 mnemonic seed phrase"`
-	SlipEntropy SlipEntropyCmd `cmd name:"se" help:"convert the given SLIP39 shares to a hex-encoded entropy string"`
-	EntropySlip EntropySlipCmd `cmd name:"es" help:"convert the given hex-encoded entropy string to a set of SLIP39 shares"`
+	Parse ParseCmd `cmd help:"parse a SLIP39 share"`
 }
 
 type Context struct {
 	Verbose int
 }
 
-type ParseCmd struct {
-	Share []string `arg help:"SLIP39 share mnemonic" required`
+type BipCheckwordCmd struct {
+	Multi         bool `flag short:"m"  help:"output all valid mnemonics for the given partial seed, not just one" xor:"flags"`
+	Deterministic bool `flag short:"d"  help:"always use the first checksum word found (for testing)" xor:"flags"`
+
+	PartialMnemonic []string `arg help:"BIP39 partial mnemonic seed phrase (11 or 23 words)" optional`
 }
 
 type ValBipCmd struct {
@@ -84,17 +92,60 @@ type EntropySlipCmd struct {
 	Groups  []string `arg help:"Group definitions, as \"MofN\" strings e.g. 2of4, 3of5, etc." required`
 }
 
-func (cmd ParseCmd) Run(ctx *Context) error {
-	mnemonic := strings.Join(cmd.Share, " ")
-	s, err := slip39.ParseShare(mnemonic)
+type ParseCmd struct {
+	Share []string `arg help:"SLIP39 share mnemonic" optional`
+}
+
+func (cmd BipCheckwordCmd) Run(ctx *Context) error {
+	mnemonic, err := readMnemonic(cmd.PartialMnemonic)
+	if err != nil {
+		return fmt.Errorf("reading mnemonic: %w", err)
+	}
+
+	partialWords := strings.Fields(mnemonic)
+	if len(partialWords) == 0 {
+		return errors.New("no mnemonic seed provided")
+	}
+	if len(partialWords) != 11 && len(partialWords) != 23 {
+		return fmt.Errorf("invalid mnemonic seed length %d (must be 11 or 23)",
+			len(partialWords))
+	}
+
+	checksumWords, err := bip39ChecksumWords(partialWords)
 	if err != nil {
 		return err
 	}
-	data, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		return err
+
+	if cmd.Multi {
+		// Validate all the checksumWords
+		for _, w := range checksumWords {
+			seed := strings.Join(append(partialWords, w), " ")
+			ok := bip39.IsMnemonicValid(seed)
+			if !ok {
+				return fmt.Errorf("generated invalid mnemonic: %q", seed)
+			}
+		}
+
+		// Output
+		for _, w := range checksumWords {
+			seed := strings.Join(append(partialWords, w), " ")
+			fmt.Println(seed)
+		}
+		return nil
 	}
-	fmt.Println(string(data))
+
+	// Select, validate, and output using a random checksum word
+	i := 0
+	if !cmd.Deterministic {
+		rand.Intn(len(checksumWords))
+	}
+	seed := strings.Join(append(partialWords, checksumWords[i]), " ")
+	ok := bip39.IsMnemonicValid(seed)
+	if !ok {
+		return fmt.Errorf("generated invalid mnemonic: %q", seed)
+	}
+	fmt.Println(seed)
+
 	return nil
 }
 
@@ -239,11 +290,26 @@ func (cmd EntropySlipCmd) Run(ctx *Context) error {
 	return nil
 }
 
+func (cmd ParseCmd) Run(ctx *Context) error {
+	mnemonic := strings.Join(cmd.Share, " ")
+	s, err := slip39.ParseShare(mnemonic)
+	if err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(data))
+	return nil
+}
+
 func readStdinMnemonic() (string, error) {
 	data, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		return "", fmt.Errorf("reading stdin: %w", err)
 	}
+	// Recombine the input into a single line with single spaces
 	mnemonic := reWhitespace.ReplaceAllString(strings.TrimSpace(string(data)), " ")
 	return mnemonic, nil
 }
@@ -290,6 +356,55 @@ func readShareMnemonics(args []string) ([]string, error) {
 	slog.Info("readShareMnemonics", "mnemonics", mnemonics)
 
 	return mnemonics, nil
+}
+
+func bip39Entropy(partialWords []string) (*big.Int, error) {
+	i := big.NewInt(0)
+	for _, w := range partialWords {
+		idx, ok := bip39.GetWordIndex(w)
+		if !ok {
+			return nil, fmt.Errorf("invalid mnemonic word %q", w)
+		}
+		i.Lsh(i, 11)
+		i.Or(i, big.NewInt(int64(idx)))
+	}
+	return i, nil
+}
+
+// bip39ChecksumWords generates a slice of possible checksum words for the
+// BIP39 partial mnemonic in partialWords
+// Based on https://github.com/avsync/bip39chk
+func bip39ChecksumWords(partialWords []string) ([]string, error) {
+	entropy, err := bip39Entropy(partialWords)
+	if err != nil {
+		return nil, err
+	}
+
+	size := len(partialWords) + 1
+	checksumBits := size / 3
+	entropySize := (size*11 - checksumBits) / 8
+	entropyToFill := 11 - checksumBits
+	entropyBase := entropy.Lsh(entropy, uint(entropyToFill))
+
+	// Generate all possible checksum words
+	iterations := int(math.Pow(2, float64(entropyToFill)))
+	checksums := make([]string, 0, iterations)
+	buf := make([]byte, entropySize)
+	wordlist := bip39.GetWordList()
+	entropyCandidate := entropyBase
+	for i := range iterations {
+		entropyBytes := entropyCandidate.FillBytes(buf)
+		h := sha256.New()
+		h.Write(entropyBytes)
+		hash := h.Sum(nil)
+		checksum := int(hash[0]) >> (8 - checksumBits)
+		idx := (i << checksumBits) + checksum
+		checkword := wordlist[idx]
+		checksums = append(checksums, checkword)
+		entropyCandidate.Add(entropyCandidate, big.NewInt(1))
+	}
+
+	return checksums, nil
 }
 
 func parseGroups(groupstr []string) ([]slip39.MemberGroupParameters, error) {
