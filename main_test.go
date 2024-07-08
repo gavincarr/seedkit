@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -114,10 +115,12 @@ func TestBipCheckword(t *testing.T) {
 			writer:  &buf,
 			verbose: 0,
 		}
+
 		err := tc.cmd.Run(&ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		got := buf.String()
 		want := tc.want
 		if tc.wantFile != "" {
@@ -129,6 +132,98 @@ func TestBipCheckword(t *testing.T) {
 		}
 		if got != want {
 			t.Errorf("want %q, got %q", want, got)
+		}
+	}
+}
+
+func TestBipValidate_Success(t *testing.T) {
+	t.Parallel()
+
+	// Load all testdata `bipNs.txt` files (good mnemonics)
+	tests := make(map[string]string)
+	testfiles, err := filepath.Glob("testdata/bip?s.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tf := range testfiles {
+		data, err := ioutil.ReadFile(tf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tests[tf] = string(data)
+	}
+
+	for _, quiet := range []bool{true, false} {
+		for tf, mnemonic := range tests {
+			cmd := BipValCmd{
+				Quiet: quiet,
+				Seed:  strings.Fields(strings.TrimSpace(mnemonic)),
+			}
+			var buf bytes.Buffer
+			ctx := Context{
+				writer:  &buf,
+				verbose: 0,
+			}
+
+			err := cmd.Run(&ctx)
+			if err != nil {
+				t.Errorf("mnemonic %q reported as invalid", tf)
+			}
+
+			got := buf.String()
+			if quiet {
+				if got != "" {
+					t.Errorf("mnemonic %q returned output in quiet mode: %s",
+						tf, got)
+				}
+				continue
+			}
+			if !strings.Contains(got, "good") {
+				t.Errorf("mnemonic %q returned no error but outputs invalid", tf)
+			}
+		}
+	}
+}
+
+func TestBipValidate_Failure(t *testing.T) {
+	t.Parallel()
+
+	// Load all testdata `bipMfN.txt` files (bad mnemonics)
+	tests := make(map[string]string)
+	testfiles, err := filepath.Glob("testdata/bip?f?.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tf := range testfiles {
+		data, err := ioutil.ReadFile(tf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tests[tf] = string(data)
+	}
+
+	for _, quiet := range []bool{false, true} {
+		for tf, mnemonic := range tests {
+			cmd := BipValCmd{
+				Quiet: quiet,
+				Seed:  strings.Fields(strings.TrimSpace(mnemonic)),
+			}
+			var buf bytes.Buffer
+			ctx := Context{
+				writer:  &buf,
+				verbose: 0,
+			}
+
+			err := cmd.Run(&ctx)
+			if err == nil {
+				t.Errorf("mnemonic %q reported as valid", tf)
+			}
+
+			got := buf.String()
+			if got != "" {
+				t.Errorf("mnemonic %q invalid but returned output: %s",
+					tf, got)
+			}
 		}
 	}
 }
