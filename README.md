@@ -62,7 +62,7 @@ abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon 
 $ echo $PARTIAL_SEED | seedkit bc --multi --word
 about
 actual
-<omitted for brevity...>
+[...]
 world
 wrap
 
@@ -89,11 +89,17 @@ abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon 
 
 # Convert a set of SLIP-39 mnemonic shares into labelled word format
 $ cat slip39.txt | seedkit sl | tee slip39-words.txt
+101 carpet
+102 morning
+[...]
+319 duckling
+320 premium
 
 # Convert from labelled word format back to SLIP-39 mnemonic shares
 $ cat slip39-words.txt | seedkit ls
-
-
+carpet morning academic acid carbon mild yield axis premium username olympic parking crystal costume exhaust language equip prevent beam velvet
+carpet morning academic agency alien scramble traffic again total payroll language galaxy fluff debut destroy pickup bucket level unfair daisy
+carpet morning academic always cylinder display remind lying document fishing decorate work either briefing software herd craft crucial duckling premium
 ```
 
 
@@ -105,5 +111,5 @@ seedkit is heavily dependant on the following wonderful libraries:
 - [go-bip39](https://github.com/tyler-smith/go-bip39)
 - [go-slip39](https://github.com/gavincarr/go-slip39)
 
-and built with the lovely [Kong](https://github.com/alecthomas/kong) framework.
+and is built with the lovely [Kong](https://github.com/alecthomas/kong) framework.
 

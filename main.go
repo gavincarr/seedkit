@@ -39,8 +39,10 @@ var cli struct {
 	BipVal       BipValCmd       `cmd name:"bv" help:"validate the given BIP39 mnemonic seed phrase"`
 	BipSlip      BipSlipCmd      `cmd name:"bs" help:"convert the given BIP39 mnemonic seed phrase to a set of SLIP39 shares"`
 	BipEntropy   BipEntropyCmd   `cmd name:"be" help:"convert the given BIP39 mnemonic seed phrase to a hex-encoded entropy string"`
-	SlipVal      SlipValCmd      `cmd name:"sv" help:"validate a full set of SLIP39 mnemonic share phrase(s)"`
-	SlipBip      SlipBipCmd      `cmd name:"sb" help:"convert a minimal set of SLIP39 mnemonic share phrase(s) to a BIP39 mnemonic"`
+	SlipVal      SlipValCmd      `cmd name:"sv" help:"validate a full set of SLIP39 mnemonic shares"`
+	SlipBip      SlipBipCmd      `cmd name:"sb" help:"convert a minimal set of SLIP39 mnemonic shares to a BIP39 mnemonic seed"`
+	SlipLabel    SlipLabelCmd    `cmd name:"sl" help:"convert a full set of SLIP39 mnemonic shares to labelled word format"`
+	LabelSlip    LabelSlipCmd    `cmd name:"ls" help:"convert a labelled word set to a set of SLIP39 mnemonic shares"`
 	SlipEntropy  SlipEntropyCmd  `cmd name:"se" help:"convert the given SLIP39 shares to a hex-encoded entropy string"`
 	EntropyBip   EntropyBipCmd   `cmd name:"eb" help:"convert the given hex-encoded entropy string to a BIP39 mnemonic seed phrase"`
 	EntropySlip  EntropySlipCmd  `cmd name:"es" help:"convert the given hex-encoded entropy string to a set of SLIP39 shares"`
@@ -50,6 +52,7 @@ var cli struct {
 
 type Context struct {
 	verbose int
+	reader  io.Reader
 	writer  io.Writer
 }
 
@@ -82,6 +85,14 @@ type SlipBipCmd struct {
 	Shares []string `arg help:"minimal set of SLIP39 share mnemonics (repeated quoted args, or one per line on stdin)" optional`
 }
 
+type SlipLabelCmd struct {
+	Shares []string `arg help:"minimal set of SLIP39 share mnemonics (repeated quoted args, or one per line on stdin)" optional`
+}
+
+type LabelSlipCmd struct {
+	//Shares []string `arg help:"minimal set of SLIP39 share mnemonics (repeated quoted args, or one per line on stdin)" optional`
+}
+
 type BipEntropyCmd struct {
 	Seed []string `arg help:"BIP39 mnemonic seed phrase" optional`
 }
@@ -104,7 +115,7 @@ type ParseCmd struct {
 }
 
 func (cmd BipCheckwordCmd) Run(ctx *Context) error {
-	mnemonic, err := readMnemonic(cmd.PartialMnemonic)
+	mnemonic, err := readSeedMnemonic(ctx, cmd.PartialMnemonic)
 	if err != nil {
 		return fmt.Errorf("reading mnemonic: %w", err)
 	}
@@ -165,7 +176,7 @@ func (cmd BipCheckwordCmd) Run(ctx *Context) error {
 }
 
 func (cmd BipValCmd) Run(ctx *Context) error {
-	mnemonic, err := readMnemonic(cmd.Seed)
+	mnemonic, err := readSeedMnemonic(ctx, cmd.Seed)
 	if err != nil {
 		return err
 	}
@@ -186,7 +197,7 @@ func (cmd BipValCmd) Run(ctx *Context) error {
 }
 
 func (cmd BipSlipCmd) Run(ctx *Context) error {
-	mnemonic, err := readMnemonic(cmd.Seed)
+	mnemonic, err := readSeedMnemonic(ctx, cmd.Seed)
 	if err != nil {
 		return err
 	}
@@ -223,7 +234,7 @@ func (cmd BipSlipCmd) Run(ctx *Context) error {
 }
 
 func (cmd SlipValCmd) Run(ctx *Context) error {
-	mnemonics, err := readShareMnemonics(cmd.Shares)
+	mnemonics, err := readShareMnemonics(ctx, cmd.Shares)
 	if err != nil {
 		return err
 	}
@@ -253,7 +264,7 @@ func (cmd SlipValCmd) Run(ctx *Context) error {
 }
 
 func (cmd SlipBipCmd) Run(ctx *Context) error {
-	mnemonics, err := readShareMnemonics(cmd.Shares)
+	mnemonics, err := readShareMnemonics(ctx, cmd.Shares)
 	if err != nil {
 		return err
 	}
@@ -274,8 +285,50 @@ func (cmd SlipBipCmd) Run(ctx *Context) error {
 	return nil
 }
 
+func (cmd SlipLabelCmd) Run(ctx *Context) error {
+	mnemonics, err := readShareMnemonics(ctx, cmd.Shares)
+	if err != nil {
+		return err
+	}
+
+	shareGroups, err := slip39.CollateShareGroups(mnemonics)
+	if err != nil {
+		return fmt.Errorf("collating share groups: %w", err)
+	}
+
+	words, err := shareGroups.StringLabelled()
+	if err != nil {
+		return fmt.Errorf("formatting labelled words: %w", err)
+	}
+
+	fmt.Fprint(ctx.writer, words)
+
+	return nil
+}
+
+func (cmd LabelSlipCmd) Run(ctx *Context) error {
+	reader := ctx.reader
+	if reader == nil {
+		reader = os.Stdin
+	}
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return fmt.Errorf("reading stdin: %w", err)
+	}
+
+	shareGroups, err := slip39.CombineLabelledShares(string(data))
+	if err != nil {
+		return fmt.Errorf("combining labelled words: %w", err)
+	}
+
+	shares := shareGroups.String()
+	fmt.Fprint(ctx.writer, shares)
+
+	return nil
+}
+
 func (cmd BipEntropyCmd) Run(ctx *Context) error {
-	mnemonic, err := readMnemonic(cmd.Seed)
+	mnemonic, err := readSeedMnemonic(ctx, cmd.Seed)
 	if err != nil {
 		return err
 	}
@@ -313,7 +366,7 @@ func (cmd EntropyBipCmd) Run(ctx *Context) error {
 }
 
 func (cmd SlipEntropyCmd) Run(ctx *Context) error {
-	mnemonics, err := readShareMnemonics(cmd.Shares)
+	mnemonics, err := readShareMnemonics(ctx, cmd.Shares)
 	if err != nil {
 		return err
 	}
@@ -355,8 +408,12 @@ func (cmd ParseCmd) Run(ctx *Context) error {
 	return nil
 }
 
-func readStdinMnemonic() (string, error) {
-	data, err := io.ReadAll(os.Stdin)
+func readStdinSeedMnemonic(ctx *Context) (string, error) {
+	reader := ctx.reader
+	if reader == nil {
+		reader = os.Stdin
+	}
+	data, err := io.ReadAll(reader)
 	if err != nil {
 		return "", fmt.Errorf("reading stdin: %w", err)
 	}
@@ -365,22 +422,22 @@ func readStdinMnemonic() (string, error) {
 	return mnemonic, nil
 }
 
-func readMnemonic(args []string) (string, error) {
+func readSeedMnemonic(ctx *Context, args []string) (string, error) {
 	var mnemonic string
 	var err error
 	if len(args) > 0 {
 		mnemonic = strings.Join(args, " ")
 	} else {
-		mnemonic, err = readStdinMnemonic()
+		mnemonic, err = readStdinSeedMnemonic(ctx)
 		if err != nil {
 			return "", err
 		}
 	}
-	//slog.Info("readMnemonic", "mnemonic", mnemonic)
+	//slog.Info("readSeedMnemonic", "mnemonic", mnemonic)
 	return mnemonic, nil
 }
 
-func readShareMnemonics(args []string) ([]string, error) {
+func readShareMnemonics(ctx *Context, args []string) ([]string, error) {
 	var mnemonics []string
 	// If we have args, but fewer than 20, assume they're quoted mnemonics
 	if len(args) > 0 && len(args) < 20 {
@@ -393,9 +450,13 @@ func readShareMnemonics(args []string) ([]string, error) {
 		mnemonics = []string{strings.Join(args, " ")}
 	}
 
-	// If we have no args, read mnemonics from stdin, one per line
+	// If we have no args, read mnemonics from ctx.reader/stdin, one per line
+	reader := ctx.reader
+	if reader == nil {
+		reader = os.Stdin
+	}
 	if len(mnemonics) == 0 {
-		scanner := bufio.NewScanner(os.Stdin)
+		scanner := bufio.NewScanner(reader)
 		for scanner.Scan() {
 			m := strings.TrimSpace(scanner.Text())
 			mnemonics = append(mnemonics, m)
@@ -404,7 +465,7 @@ func readShareMnemonics(args []string) ([]string, error) {
 			return mnemonics, fmt.Errorf("scanning input: %w", err)
 		}
 	}
-	slog.Info("readShareMnemonics", "mnemonics", mnemonics)
+	//slog.Info("readShareMnemonics", "mnemonics", mnemonics)
 
 	return mnemonics, nil
 }
@@ -478,7 +539,7 @@ func parseGroups(groupstr []string) ([]slip39.MemberGroupParameters, error) {
 		}
 		groups = append(groups, group)
 	}
-	slog.Info("parseGroups", "groups", groups)
+	//slog.Info("parseGroups", "groups", groups)
 	return groups, nil
 }
 

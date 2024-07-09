@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -224,6 +225,67 @@ func TestBipValidate_Failure(t *testing.T) {
 				t.Errorf("mnemonic %q invalid but returned output: %s",
 					tf, got)
 			}
+		}
+	}
+}
+
+// Test round-tripping between SLIP-39 shares and labelled words
+func TestSlipLabel_Success(t *testing.T) {
+	t.Parallel()
+
+	// Load all testdata `slipMs.txt` files (good shares)
+	tests := make(map[string]string)
+	testfiles, err := filepath.Glob("testdata/slip?s.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tf := range testfiles {
+		data, err := ioutil.ReadFile(tf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tests[tf] = string(data)
+	}
+
+	reWords := regexp.MustCompile(`(?m)^\d{3,6} [a-z]+$`)
+	for tf, shares := range tests {
+		// Convert slip shares to labelled words
+		buf1 := bytes.NewBufferString(shares)
+		var buf2 bytes.Buffer
+		cmd := SlipLabelCmd{}
+		ctx := Context{
+			reader: buf1,
+			writer: &buf2,
+		}
+
+		err := cmd.Run(&ctx)
+		if err != nil {
+			t.Errorf("SlipLabel error on %q: %s", tf, err.Error())
+			continue
+		}
+
+		words := buf2.String()
+		if !reWords.MatchString(words) {
+			t.Errorf("test file %q returned invalid words: %s", tf, words)
+		}
+
+		// Convert labelled words back to slip shares
+		cmd2 := LabelSlipCmd{}
+		ctx = Context{
+			reader: &buf2,
+			writer: buf1,
+		}
+
+		err = cmd2.Run(&ctx)
+		if err != nil {
+			t.Errorf("LabelSlip error on %q: %s", tf, err.Error())
+			continue
+		}
+
+		out := buf1.String()
+		if out != shares {
+			t.Errorf("round-trip mismatch on %q - got:\n%sexpected:\n%s",
+				tf, out, shares)
 		}
 	}
 }
