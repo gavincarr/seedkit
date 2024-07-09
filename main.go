@@ -33,15 +33,16 @@ var (
 )
 
 var cli struct {
-	verbose      int             `flag type:"counter" short:"v" help:"enable verbose mode"`
+	Verbose      int             `flag type:"counter" short:"v" help:"enable verbose mode"`
 	Passphrase   string          `flag short:"p" long:"pass" help:"passphrase to use for BIP39 seeds and SLIP39 shares"`
 	BipCheckword BipCheckwordCmd `cmd name:"bc" help:"generate one or more final checksum words for a BIP39 partial mnemonic"`
 	BipVal       BipValCmd       `cmd name:"bv" help:"validate the given BIP39 mnemonic seed phrase"`
 	BipSlip      BipSlipCmd      `cmd name:"bs" help:"convert the given BIP39 mnemonic seed phrase to a set of SLIP39 shares"`
-	SlipBip      SlipBipCmd      `cmd name:"sb" help:"convert the given SLIP39 mnemonic share phrase(s) to a BIP39 mnemonic"`
 	BipEntropy   BipEntropyCmd   `cmd name:"be" help:"convert the given BIP39 mnemonic seed phrase to a hex-encoded entropy string"`
-	EntropyBip   EntropyBipCmd   `cmd name:"eb" help:"convert the given hex-encoded entropy string to a BIP39 mnemonic seed phrase"`
+	SlipVal      SlipValCmd      `cmd name:"sv" help:"validate a full set of SLIP39 mnemonic share phrase(s)"`
+	SlipBip      SlipBipCmd      `cmd name:"sb" help:"convert a minimal set of SLIP39 mnemonic share phrase(s) to a BIP39 mnemonic"`
 	SlipEntropy  SlipEntropyCmd  `cmd name:"se" help:"convert the given SLIP39 shares to a hex-encoded entropy string"`
+	EntropyBip   EntropyBipCmd   `cmd name:"eb" help:"convert the given hex-encoded entropy string to a BIP39 mnemonic seed phrase"`
 	EntropySlip  EntropySlipCmd  `cmd name:"es" help:"convert the given hex-encoded entropy string to a set of SLIP39 shares"`
 	//Parse ParseCmd `cmd help:"parse a BIP39 mnemonic seed phrase or a SLIP39 share"`
 	Parse ParseCmd `cmd help:"parse a SLIP39 share"`
@@ -73,8 +74,12 @@ type BipSlipCmd struct {
 	Seed []string `arg help:"BIP39 mnemonic seed phrase" optional`
 }
 
+type SlipValCmd struct {
+	Shares []string `arg help:"full set of SLIP39 share mnemonics (repeated quoted args, or one per line on stdin)" optional`
+}
+
 type SlipBipCmd struct {
-	Shares []string `arg help:"SLIP39 share mnemonics (repeated quoted args, or one per line on stdin)" optional`
+	Shares []string `arg help:"minimal set of SLIP39 share mnemonics (repeated quoted args, or one per line on stdin)" optional`
 }
 
 type BipEntropyCmd struct {
@@ -200,6 +205,9 @@ func (cmd BipSlipCmd) Run(ctx *Context) error {
 	shareGroups, err := slip39.GenerateMnemonicsWithPassphrase(
 		cmd.GroupThreshold, groups, entropy, passphrase,
 	)
+	if err != nil {
+		return err
+	}
 
 	if cmd.Label {
 		output, err := shareGroups.StringLabelled()
@@ -214,22 +222,55 @@ func (cmd BipSlipCmd) Run(ctx *Context) error {
 	return nil
 }
 
+func (cmd SlipValCmd) Run(ctx *Context) error {
+	mnemonics, err := readShareMnemonics(cmd.Shares)
+	if err != nil {
+		return err
+	}
+
+	shareGroups, err := slip39.CollateShareGroups(mnemonics)
+	if err != nil {
+		return fmt.Errorf("collating share groups: %w", err)
+	}
+
+	passphrase := []byte{}
+	entropy, combinations, err := shareGroups.ValidateMnemonicsWithPassphrase(
+		passphrase)
+	if err != nil {
+		return fmt.Errorf("validating mnemonics: %w", err)
+	}
+
+	mnemonic, err := bip39.NewMnemonic(entropy)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(ctx.writer,
+		"SLIP-39 shares are good - %d combinations produced the same BIP-39 mnemonic:\n%s\n",
+		combinations, mnemonic)
+
+	return nil
+}
+
 func (cmd SlipBipCmd) Run(ctx *Context) error {
 	mnemonics, err := readShareMnemonics(cmd.Shares)
 	if err != nil {
 		return err
 	}
+
 	passphrase := []byte{}
 	entropy, err := slip39.CombineMnemonicsWithPassphrase(mnemonics, passphrase)
 	if err != nil {
 		return err
 	}
 	slog.Info("", "entropy", entropy, "len", len(entropy))
+
 	mnemonic, err := bip39.NewMnemonic(entropy)
 	if err != nil {
 		return err
 	}
 	fmt.Println(mnemonic)
+
 	return nil
 }
 
@@ -444,9 +485,9 @@ func parseGroups(groupstr []string) ([]slip39.MemberGroupParameters, error) {
 func runCLI(wtr io.Writer) error {
 	ctx := kong.Parse(&cli)
 	level := slog.LevelWarn
-	if cli.verbose >= 2 {
+	if cli.Verbose >= 2 {
 		level = slog.LevelDebug
-	} else if cli.verbose == 1 {
+	} else if cli.Verbose == 1 {
 		level = slog.LevelInfo
 	}
 	slog.SetDefault(slog.New(
@@ -455,7 +496,7 @@ func runCLI(wtr io.Writer) error {
 			TimeFormat: " ",
 		}),
 	))
-	return ctx.Run(&Context{writer: wtr, verbose: cli.verbose})
+	return ctx.Run(&Context{writer: wtr, verbose: cli.Verbose})
 }
 
 func main() {
