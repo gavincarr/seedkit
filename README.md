@@ -96,3 +96,14 @@ $ cat slip39-words.txt | seedkit ls
 
 ```
 
+
+Acknowledgements
+----------------
+
+seedkit is heavily dependant on the following wonderful libraries:
+
+- [go-bip39](https://github.com/tyler-smith/go-bip39)
+- [go-slip39](https://github.com/gavincarr/go-slip39)
+
+and built with the lovely [Kong](https://github.com/alecthomas/kong) framework.
+
