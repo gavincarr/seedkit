@@ -33,21 +33,19 @@ var (
 )
 
 var cli struct {
-	Verbose      int             `flag type:"counter" short:"v" help:"enable verbose mode"`
-	Passphrase   string          `flag short:"p" long:"pass" help:"passphrase to use for BIP39 seeds and SLIP39 shares"`
+	Verbose      int             `flag type:"counter" short:"v" help:"Enable verbose mode"`
 	BipCheckword BipCheckwordCmd `cmd name:"bc" help:"generate one or more final checksum words for a BIP39 partial mnemonic"`
-	BipVal       BipValCmd       `cmd name:"bv" help:"validate the given BIP39 mnemonic seed phrase"`
-	BipSlip      BipSlipCmd      `cmd name:"bs" help:"convert the given BIP39 mnemonic seed phrase to a set of SLIP39 shares"`
-	BipEntropy   BipEntropyCmd   `cmd name:"be" help:"convert the given BIP39 mnemonic seed phrase to a hex-encoded entropy string"`
+	BipVal       BipValCmd       `cmd name:"bv" help:"validate a BIP39 mnemonic seed phrase"`
+	BipSlip      BipSlipCmd      `cmd name:"bs" help:"convert a BIP39 mnemonic seed to a set of SLIP39 shares"`
+	BipEntropy   BipEntropyCmd   `cmd name:"be" help:"convert a BIP39 mnemonic seed to a hex-encoded entropy string"`
 	SlipVal      SlipValCmd      `cmd name:"sv" help:"validate a full set of SLIP39 mnemonic shares"`
 	SlipBip      SlipBipCmd      `cmd name:"sb" help:"convert a minimal set of SLIP39 mnemonic shares to a BIP39 mnemonic seed"`
 	SlipLabel    SlipLabelCmd    `cmd name:"sl" help:"convert a full set of SLIP39 mnemonic shares to labelled word format"`
 	LabelSlip    LabelSlipCmd    `cmd name:"ls" help:"convert a labelled word set to a set of SLIP39 mnemonic shares"`
 	SlipEntropy  SlipEntropyCmd  `cmd name:"se" help:"convert the given SLIP39 shares to a hex-encoded entropy string"`
-	EntropyBip   EntropyBipCmd   `cmd name:"eb" help:"convert the given hex-encoded entropy string to a BIP39 mnemonic seed phrase"`
-	EntropySlip  EntropySlipCmd  `cmd name:"es" help:"convert the given hex-encoded entropy string to a set of SLIP39 shares"`
-	//Parse ParseCmd `cmd help:"parse a BIP39 mnemonic seed phrase or a SLIP39 share"`
-	Parse ParseCmd `cmd help:"parse a SLIP39 share"`
+	EntropyBip   EntropyBipCmd   `cmd name:"eb" help:"convert a hex-encoded entropy string to a BIP39 mnemonic seed"`
+	EntropySlip  EntropySlipCmd  `cmd name:"es" help:"convert a hex-encoded entropy string to a set of SLIP39 shares"`
+	//Parse ParseCmd `cmd help:"parse a SLIP39 share"`
 }
 
 type Context struct {
@@ -71,17 +69,21 @@ type BipValCmd struct {
 
 type BipSlipCmd struct {
 	GroupThreshold int      `flag short:"t" long:"threshold" help:"Group threshold (the number of groups required to combine)" default:"1"`
-	Groups         []string `flag short:"g" long:"group" help:"Group definitions, as \"MofN\" strings e.g. 2of4, 3of5, etc. (repeatable)" required`
-	Label          bool     `flag short:"l" long:"label" help:"output in 'label' format, with one numbered word per line"`
+	Groups         []string `flag short:"g" long:"group" help:"Group definitions, as \"MofN\" strings e.g. 1of1, 2of4, 3of5, etc. (repeatable)" required`
+	Passphrase     string   `flag short:"p" long:"pass" help:"passphrase to use for BIP39 seed and SLIP39 shares"`
 
 	Seed []string `arg help:"BIP39 mnemonic seed phrase" optional`
 }
 
 type SlipValCmd struct {
+	Passphrase string `flag short:"p" long:"pass" help:"passphrase used with the SLIP39 shares"`
+
 	Shares []string `arg help:"full set of SLIP39 share mnemonics (repeated quoted args, or one per line on stdin)" optional`
 }
 
 type SlipBipCmd struct {
+	Passphrase string `flag short:"p" long:"pass" help:"passphrase to use for BIP39 seed and SLIP39 shares"`
+
 	Shares []string `arg help:"minimal set of SLIP39 share mnemonics (repeated quoted args, or one per line on stdin)" optional`
 }
 
@@ -90,7 +92,6 @@ type SlipLabelCmd struct {
 }
 
 type LabelSlipCmd struct {
-	//Shares []string `arg help:"minimal set of SLIP39 share mnemonics (repeated quoted args, or one per line on stdin)" optional`
 }
 
 type BipEntropyCmd struct {
@@ -213,6 +214,9 @@ func (cmd BipSlipCmd) Run(ctx *Context) error {
 	}
 
 	passphrase := []byte{}
+	if cmd.Passphrase != "" {
+		passphrase = []byte(cmd.Passphrase)
+	}
 	shareGroups, err := slip39.GenerateMnemonicsWithPassphrase(
 		cmd.GroupThreshold, groups, entropy, passphrase,
 	)
@@ -220,15 +224,7 @@ func (cmd BipSlipCmd) Run(ctx *Context) error {
 		return err
 	}
 
-	if cmd.Label {
-		output, err := shareGroups.StringLabelled()
-		if err != nil {
-			return err
-		}
-		fmt.Print(output)
-	} else {
-		fmt.Print(shareGroups.String())
-	}
+	fmt.Fprint(ctx.writer, shareGroups.String())
 
 	return nil
 }
@@ -245,6 +241,9 @@ func (cmd SlipValCmd) Run(ctx *Context) error {
 	}
 
 	passphrase := []byte{}
+	if cmd.Passphrase != "" {
+		passphrase = []byte(cmd.Passphrase)
+	}
 	entropy, combinations, err := shareGroups.ValidateMnemonicsWithPassphrase(
 		passphrase)
 	if err != nil {
@@ -257,7 +256,7 @@ func (cmd SlipValCmd) Run(ctx *Context) error {
 	}
 
 	fmt.Fprintf(ctx.writer,
-		"SLIP-39 shares are good - %d combinations produced the same BIP-39 mnemonic:\n%s\n",
+		"SLIP-39 shares are good - %d combination(s) produced the same BIP-39 mnemonic:\n%s\n",
 		combinations, mnemonic)
 
 	return nil
@@ -270,17 +269,20 @@ func (cmd SlipBipCmd) Run(ctx *Context) error {
 	}
 
 	passphrase := []byte{}
+	if cmd.Passphrase != "" {
+		passphrase = []byte(cmd.Passphrase)
+	}
 	entropy, err := slip39.CombineMnemonicsWithPassphrase(mnemonics, passphrase)
 	if err != nil {
 		return err
 	}
-	slog.Info("", "entropy", entropy, "len", len(entropy))
+	//slog.Info("", "entropy", entropy, "len", len(entropy))
 
 	mnemonic, err := bip39.NewMnemonic(entropy)
 	if err != nil {
 		return err
 	}
-	fmt.Println(mnemonic)
+	fmt.Fprintln(ctx.writer, mnemonic)
 
 	return nil
 }
@@ -336,7 +338,7 @@ func (cmd BipEntropyCmd) Run(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(hex.EncodeToString(entropy))
+	fmt.Fprintln(ctx.writer, hex.EncodeToString(entropy))
 	return nil
 }
 
@@ -350,18 +352,18 @@ func (cmd EntropyBipCmd) Run(ctx *Context) error {
 			return err
 		}
 		entropyString = strings.TrimSpace(string(entropyBytes))
-		slog.Info("", "entropyString", entropyString, "len", len(entropyString))
+		//slog.Info("", "entropyString", entropyString, "len", len(entropyString))
 	}
 	entropy, err := hex.DecodeString(entropyString)
 	if err != nil {
 		return err
 	}
-	slog.Info("", "entropy", entropy, "len", len(entropy))
+	//slog.Info("", "entropy", entropy, "len", len(entropy))
 	mnemonic, err := bip39.NewMnemonic(entropy)
 	if err != nil {
 		return err
 	}
-	fmt.Println(mnemonic)
+	fmt.Fprintln(ctx.writer, mnemonic)
 	return nil
 }
 
@@ -375,7 +377,7 @@ func (cmd SlipEntropyCmd) Run(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(hex.EncodeToString(entropy))
+	fmt.Fprintln(ctx.writer, hex.EncodeToString(entropy))
 	return nil
 }
 
@@ -390,7 +392,7 @@ func (cmd EntropySlipCmd) Run(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("entropy %s, groups %v\n", cmd.Entropy, groups)
+	fmt.Fprintf(ctx.writer, "entropy %s, groups %v\n", cmd.Entropy, groups)
 	return nil
 }
 
@@ -404,7 +406,7 @@ func (cmd ParseCmd) Run(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(data))
+	fmt.Fprintln(ctx.writer, string(data))
 	return nil
 }
 

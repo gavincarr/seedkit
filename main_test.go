@@ -229,6 +229,72 @@ func TestBipValidate_Failure(t *testing.T) {
 	}
 }
 
+// Test round-tripping between BIP-39 mnemonics and SLIP-39 shares
+func TestBipSlip(t *testing.T) {
+	t.Parallel()
+
+	// Load all testdata `bipNs.txt` files (good mnemonics)
+	tests := make(map[string]string)
+	testfiles, err := filepath.Glob("testdata/bip?s.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tf := range testfiles {
+		data, err := ioutil.ReadFile(tf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tests[tf] = string(data)
+	}
+
+	for _, passphrase := range []string{"", "TREZOR"} {
+		for tf, mnemonic := range tests {
+			//t.Logf("testing %s with passphrase %q", tf, passphrase)
+
+			cmd := BipSlipCmd{
+				GroupThreshold: 1,
+				Groups:         []string{"2of3"},
+				Passphrase:     passphrase,
+				Seed:           strings.Fields(strings.TrimSpace(mnemonic)),
+			}
+			var buf bytes.Buffer
+			ctx := Context{
+				writer: &buf,
+			}
+
+			err := cmd.Run(&ctx)
+			if err != nil {
+				t.Errorf("mnemonic %q reported as invalid: %s", tf, err.Error())
+				continue
+			}
+
+			got := buf.String()
+			//t.Logf("mnemonic %q converted to SLIP-39 shares:\n%s", tf, got)
+
+			shares := strings.Split(strings.TrimSpace(got), "\n")
+			cmd2 := SlipBipCmd{
+				Passphrase: passphrase,
+				Shares:     shares[:2],
+			}
+
+			buf.Reset()
+			err = cmd2.Run(&ctx)
+			if err != nil {
+				t.Errorf("mnemonic %q reported as invalid: %s", tf, err.Error())
+				break
+				continue
+			}
+
+			got = buf.String()
+			//t.Logf("mnemonic %q converted back to BIP-39 seed:\n%s", tf, got)
+			if got != mnemonic {
+				t.Errorf("round-trip mismatch on %q - got:\n%sexpected:\n%s",
+					tf, got, mnemonic)
+			}
+		}
+	}
+}
+
 // Test round-tripping between SLIP-39 shares and labelled words
 func TestSlipLabel_Success(t *testing.T) {
 	t.Parallel()

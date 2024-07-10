@@ -52,6 +52,8 @@ Usage
 ```bash
 # Seedkit top-level help
 seedkit -h
+# Seedkit command-specific help
+seedkit <cmd> -h
 
 # Generate  a randomised final checksum word for a partial BIP-39 mnemonic seed
 $ PARTIAL_SEED="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon"
@@ -106,10 +108,9 @@ carpet morning academic always cylinder display remind lying document fishing de
 Acknowledgements
 ----------------
 
-seedkit is heavily dependant on the following wonderful libraries:
+seedkit uses the following excellent libraries:
 
 - [go-bip39](https://github.com/tyler-smith/go-bip39)
 - [go-slip39](https://github.com/gavincarr/go-slip39)
-
-and is built with the lovely [Kong](https://github.com/alecthomas/kong) framework.
+- [kong](https://github.com/alecthomas/kong)
 
