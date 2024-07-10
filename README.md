@@ -3,6 +3,8 @@ Seedkit
 
 [![MIT License](https://img.shields.io/github/license/gavincarr/go-slip39.svg?maxAge=2592000&color=blue)](https://github.com/gavincarr/go-slip39/blob/master/LICENCE)
 [![Go Build Status](https://github.com/gavincarr/seedkit/actions/workflows/go.yml/badge.svg)](https://github.com/gavincarr/seedkit/actions/workflows/go.yml/badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/gavincarr/seedkit)](https://goreportcard.com/report/github.com/gavincarr/seedkit)
+
 
 
 Seedkit is a command line tool for working with Bitcoin BIP-39 mnemonic seeds
