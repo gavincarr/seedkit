@@ -11,7 +11,7 @@
 /data/*
 /delta/applied/*
 /dist/*
-/go.work
+/go.work*
 /node_modules/*
 /pkg/linux_amd64/*
 /pkg/*.*/

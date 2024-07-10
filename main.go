@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log/slog"
 	"math"
 	"math/big"
@@ -63,26 +64,27 @@ type BipCheckwordCmd struct {
 }
 
 type BipValCmd struct {
-	Quiet bool     `flag short:"q" long:"quiet" help:"suppress output, just set return code for result"`
+	Quiet bool     `flag short:"q" help:"suppress output, just set return code for result"`
 	Seed  []string `arg help:"BIP39 mnemonic seed phrase" optional`
 }
 
 type BipSlipCmd struct {
-	GroupThreshold int      `flag short:"t" long:"threshold" help:"Group threshold (the number of groups required to combine)" default:"1"`
-	Groups         []string `flag short:"g" long:"group" help:"Group definitions, as \"MofN\" strings e.g. 1of1, 2of4, 3of5, etc. (repeatable)" required`
-	Passphrase     string   `flag short:"p" long:"pass" help:"passphrase to use for BIP39 seed and SLIP39 shares"`
+	GroupThreshold int      `flag short:"t" aliases:"threshold" help:"Group threshold (the number of groups required to combine)" default:"1"`
+	Groups         []string `flag short:"g" help:"Group definitions, as \"MofN\" strings e.g. 1of1, 2of4, 3of5, etc. (repeatable)" required`
+	Passphrase     string   `flag short:"p" help:"passphrase to use for BIP39 seed and SLIP39 shares"`
 
 	Seed []string `arg help:"BIP39 mnemonic seed phrase" optional`
 }
 
 type SlipValCmd struct {
-	Passphrase string `flag short:"p" long:"pass" help:"passphrase used with the SLIP39 shares"`
+	Passphrase string `flag short:"p" help:"passphrase used with the SLIP39 shares"`
+	CheckFile  string `flag short:"c" aliases:"cf" help:"check file with the source BIP39 mnemonic seed"`
 
 	Shares []string `arg help:"full set of SLIP39 share mnemonics (repeated quoted args, or one per line on stdin)" optional`
 }
 
 type SlipBipCmd struct {
-	Passphrase string `flag short:"p" long:"pass" help:"passphrase to use for BIP39 seed and SLIP39 shares"`
+	Passphrase string `flag short:"p" help:"passphrase to use for BIP39 seed and SLIP39 shares"`
 
 	Shares []string `arg help:"minimal set of SLIP39 share mnemonics (repeated quoted args, or one per line on stdin)" optional`
 }
@@ -249,15 +251,39 @@ func (cmd SlipValCmd) Run(ctx *Context) error {
 	if err != nil {
 		return fmt.Errorf("validating mnemonics: %w", err)
 	}
+	plural := ""
+	if combinations > 1 {
+		plural = "s"
+	}
 
 	mnemonic, err := bip39.NewMnemonic(entropy)
 	if err != nil {
 		return err
 	}
 
+	// If cmd.CheckFile is supplied, it should contain the expected BIP39 mnemonic
+	if cmd.CheckFile != "" {
+		data, err := ioutil.ReadFile(cmd.CheckFile)
+		if err != nil {
+			return fmt.Errorf("reading check file: %w", err)
+		}
+
+		expectedMnemonic := strings.TrimSpace(string(data))
+		if mnemonic != expectedMnemonic {
+			return fmt.Errorf("All SLIP-39 combinations agreed, but on an unexpected mnemonic (passphrase?):\ngot: %s\ncf:  %s",
+				mnemonic, expectedMnemonic)
+		}
+
+		fmt.Fprintf(ctx.writer,
+			"All SLIP-39 shares are good - %d combination%s produced the %q mnemonic\n",
+			combinations, plural, cmd.CheckFile)
+
+		return nil
+	}
+
 	fmt.Fprintf(ctx.writer,
-		"SLIP-39 shares are good - %d combination(s) produced the same BIP-39 mnemonic:\n%s\n",
-		combinations, mnemonic)
+		"All SLIP-39 shares are good - %d combination%s produced the same BIP-39 mnemonic:\n%s\n",
+		combinations, plural, mnemonic)
 
 	return nil
 }

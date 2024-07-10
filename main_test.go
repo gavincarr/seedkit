@@ -295,6 +295,54 @@ func TestBipSlip(t *testing.T) {
 	}
 }
 
+// Test validation of good SLIP-39 shares
+func TestSlipVal_Success(t *testing.T) {
+	t.Parallel()
+
+	skipTests := make(map[string]bool)
+	skipTests["testdata/slip5s.txt"] = true
+	skipTests["testdata/slip6s.txt"] = true
+
+	// Load all testdata `slipMs.txt` files (good shares)
+	tests := make(map[string]string)
+	testfiles, err := filepath.Glob("testdata/slip?s.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tf := range testfiles {
+		if skipTests[tf] {
+			continue
+		}
+
+		data, err := ioutil.ReadFile(tf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tests[tf] = string(data)
+	}
+
+	for tf, shares := range tests {
+		buf1 := bytes.NewBufferString(shares)
+		var buf2 bytes.Buffer
+		cmd := SlipValCmd{}
+		ctx := Context{
+			reader: buf1,
+			writer: &buf2,
+		}
+
+		err := cmd.Run(&ctx)
+		if err != nil {
+			t.Errorf("SlipVal error on %q: %s", tf, err.Error())
+			continue
+		}
+
+		got := buf2.String()
+		if !strings.Contains(got, "good") {
+			t.Errorf("unexpected output on successful sv for %q: %s", tf, got)
+		}
+	}
+}
+
 // Test round-tripping between SLIP-39 shares and labelled words
 func TestSlipLabel_Success(t *testing.T) {
 	t.Parallel()
