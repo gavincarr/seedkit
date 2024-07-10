@@ -343,6 +343,42 @@ func TestSlipVal_Success(t *testing.T) {
 	}
 }
 
+// Test validation of bad SLIP-39 shares
+func TestSlipVal_Failure(t *testing.T) {
+	t.Parallel()
+
+	// Load all testdata `slipNf.txt` files (bad shares)
+	tests := make(map[string]string)
+	testfiles, err := filepath.Glob("testdata/slip?f.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tf := range testfiles {
+		data, err := ioutil.ReadFile(tf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tests[tf] = string(data)
+	}
+
+	for tf, shares := range tests {
+		buf1 := bytes.NewBufferString(shares)
+		var buf2 bytes.Buffer
+		cmd := SlipValCmd{}
+		ctx := Context{
+			reader: buf1,
+			writer: &buf2,
+		}
+
+		err := cmd.Run(&ctx)
+		if err == nil {
+			t.Errorf("%q unexpectedly succeeded!", tf)
+			continue
+		}
+		//t.Logf("%q produced an error, as expected: %s", tf, err.Error())
+	}
+}
+
 // Test round-tripping between SLIP-39 shares and labelled words
 func TestSlipLabel_Success(t *testing.T) {
 	t.Parallel()
