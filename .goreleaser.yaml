@@ -29,6 +29,7 @@ gomod:
 
 release:
   github:
+    owner: gavincarr
     name: seedkit
 
 archives:
