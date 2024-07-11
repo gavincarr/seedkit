@@ -31,9 +31,6 @@ release:
   github:
     name: seedkit
 
-env_files:
-  github_token: ~/.gh_goreleaser
-
 archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of `uname`.
