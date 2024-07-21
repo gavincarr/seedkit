@@ -30,7 +30,7 @@ Dependencies
 
 * Goreleaser - seedkit uses [goreleaser](https://goreleaser.com) to
   build the seedkit releases, and this provides a convenient way to
-  produce an identical build process.
+  replicate an identical build process.
 
   Install 
 
@@ -55,7 +55,7 @@ Recipe
   machine you will be using (probably x86_64 unless you're on a Mac or
   Raspberry Pi - check with `uname -m`).
 
-* Then in a shell enviromment, do:
+* Then in a shell environment, do:
 
 ```bash
 # Set VTAG and TAG variables for the seedkit release you want to reproduce
@@ -85,6 +85,6 @@ sha256sum dist/seedkit_Linux_arm64.tar.gz
 
 * If you are using Tails, you can now download the tar file you verified
   from the seedkit releases page and set it up for use on Tails (or put
-  the tar file you build on a webserver somewhere where Tails can access
+  the tar file you built on a webserver somewhere where Tails can access
   it).
 
