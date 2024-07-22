@@ -442,3 +442,41 @@ func TestSlipLabel_Success(t *testing.T) {
 		}
 	}
 }
+
+// Test trying to convert bad sets labelled words
+func TestSlipLabel_Failure(t *testing.T) {
+	t.Parallel()
+
+	// Load all testdata `slabelsMf.txt` files (bad labelled words)
+	tests := make(map[string]string)
+	testfiles, err := filepath.Glob("testdata/slabels?f.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tf := range testfiles {
+		data, err := ioutil.ReadFile(tf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tests[tf] = string(data)
+	}
+
+	for tf, shares := range tests {
+		// Convert labelled words to slip shares
+		buf1 := bytes.NewBufferString(shares)
+		var buf2 bytes.Buffer
+		cmd := LabelSlipCmd{}
+		ctx := Context{
+			reader: buf1,
+			writer: &buf2,
+		}
+
+		err = cmd.Run(&ctx)
+		if err == nil {
+			t.Errorf("LabelSlip on %q unexpectedly suceeded!", tf)
+			continue
+		}
+
+		t.Logf("LabelSlip on %q produced an error, as expected: %s", tf, err.Error())
+	}
+}
