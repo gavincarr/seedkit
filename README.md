@@ -21,14 +21,16 @@ Seedkit supports the following operations:
 
 - generating SLIP-39 mnemonic shares from a BIP-39 mnemonic seed
 
-- validating that a full set of SLIP-39 mnemonic shares is complete and
-  all generate the same master secret
+- validating that all shares from a set of SLIP-39 mnemonic shares are valid
+  and that all combinations generate the same master secret
 
 - combining a minimal set SLIP-39 mnemonic shares to recover a BIP-39 mnemonic
   seed
 
 - converting a set of SLIP-39 mnemonic shares into a labelled word format
-  (suitable for stamping onto metal washers), and the reverse
+  (suitable for transcribing on long-term media like metal), and converting
+  labelled words back into SLIP-39 mnemonic shares (e.g. for transcription
+  validation)
 
 
 Security
@@ -47,7 +49,13 @@ have had connected to the internet is compromised and untrustworthy.
 Installation
 ------------
 
-TODO
+For test purposes use the [official release tarballs](https://github.com/gavincarr/seedkit/releases/latest), or build from source:
+
+```bash
+go install github.com/gavincarr/seedkit@latest
+``` 
+
+To install on Tails, see the [Installing seedkit on tails](https://github.com/gavincarr/seedkit/blob/main/recipes/installing_seedkit_on_tails.md) recipe.
 
 
 Usage
