@@ -7,17 +7,15 @@ Tails, and that seedkit is installed in your ~/Persistent folder.
 (see [Installing seedkit on tails](https://github.com/gavincarr/seedkit/blob/main/recipes/installing_seedkit_on_tails.md)
 for instructions). Adjust as required.
 
-Please *DO NOT* use with real secrets on a network-connected computer.
+Please **DO NOT** use with real secrets on a network-connected computer.
 
 
-1. Start Tails and open a terminal
-----------------------------------
+## 1. Start Tails and open a terminal
 
 Open a terminal using "Applications > Utilities > Terminal".
 
 
-2. Generate SLIP-39 shares from your BIP-39 seed
-------------------------------------------------
+## 2. Generate SLIP-39 shares from your BIP-39 seed
 
 The seedkit `bs` command, which generates SLIP-39 shares from a
 BIP-39 seed, requires you to specify at least one `-g/--groups` option,
@@ -42,8 +40,7 @@ cat bip39.txt | ~/Persistent/seedkit bs -t 2 -g 2of3 -g 3of5 | tee slip39.txt
 ```
 
 
-3. Validate the generated SLIP-39 shares
-----------------------------------------
+## 3. Validate the generated SLIP-39 shares
 
 Exhaustively validate the generated SLIP-39 shares using the `sv` command,
 which checks that all quorum combinations of shares are valid, and produce
@@ -58,8 +55,7 @@ BIP-39 mnemonic the shares generated (which should match your input BIP-39
 mnemonic, of course).
 
 
-4. Record your SLIP-39 shares
------------------------------
+## 4. Record your SLIP-39 shares
 
 Record your SLIP-39 shares either on paper, or on a durable medium like
 metal. It is recommended that you label each share with:
@@ -80,8 +76,7 @@ cat slip39.txt | ~/Persistent/seedkit sl | less
 ```
 
 
-5. Re-enter your SLIP-39 shares to check for transcription errors
------------------------------------------------------------------
+## 5. Re-enter your SLIP-39 shares to check for transcription errors
 
 Ideally, to check for transcription errors, you should re-enter your
 transcribed words into a new shares file, one line per share, and then
@@ -98,10 +93,9 @@ you have one or more transcription errors in your shares, which need to be
 corrected.
 
 
-6. Store your SLIP-39 shares securely
--------------------------------------
+## 6. Store your SLIP-39 shares securely
 
 Finally, store your SLIP-39 shares in separate secure locations.
 
-*NEVER* store a quorum of shares from the same group in the same location.
+**NEVER** store a quorum of shares from the same group in the same location.
 
