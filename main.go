@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
+	"github.com/fatih/color"
 	"github.com/gavincarr/go-slip39"
 	"github.com/lmittmann/tint"
 	"github.com/tyler-smith/go-bip39"
@@ -26,6 +27,7 @@ import (
 
 const (
 	GroupLimit = 16
+	tickGlyph  = "✔"
 )
 
 var (
@@ -193,7 +195,8 @@ func (cmd BipValCmd) Run(ctx *Context) error {
 	}
 
 	if !cmd.Quiet {
-		fmt.Fprintln(ctx.writer, "BIP-39 mnemonic is good")
+		fmt.Fprintf(ctx.writer, "%s BIP-39 mnemonic is %s\n",
+			color.GreenString(tickGlyph), color.GreenString("good"))
 	}
 
 	return nil
@@ -270,19 +273,21 @@ func (cmd SlipValCmd) Run(ctx *Context) error {
 
 		expectedMnemonic := strings.TrimSpace(string(data))
 		if mnemonic != expectedMnemonic {
-			return fmt.Errorf("All SLIP-39 combinations agreed, but on an unexpected mnemonic (passphrase?):\ngot: %s\ncf:  %s",
+			return fmt.Errorf("all SLIP-39 combinations agreed, but on an unexpected mnemonic (passphrase?):\ngot: %s\ncf:  %s",
 				mnemonic, expectedMnemonic)
 		}
 
 		fmt.Fprintf(ctx.writer,
-			"All SLIP-39 shares are good - %d combination%s produced the %q mnemonic\n",
+			"%s All SLIP-39 shares are %s - %d combination%s produced the %q mnemonic\n",
+			color.GreenString(tickGlyph), color.GreenString("good"),
 			combinations, plural, cmd.CheckFile)
 
 		return nil
 	}
 
 	fmt.Fprintf(ctx.writer,
-		"All SLIP-39 shares are good - %d combination%s produced the same BIP-39 mnemonic:\n%s\n",
+		"%s All SLIP-39 shares are %s - %d combination%s produced the same BIP-39 mnemonic:\n%s\n",
+		color.GreenString(tickGlyph), color.GreenString("good"),
 		combinations, plural, mnemonic)
 
 	return nil
@@ -593,7 +598,8 @@ func main() {
 	if err != nil {
 		errstr := err.Error()
 		if errstr != "" {
-			fmt.Fprintln(os.Stderr, "Error: "+errstr)
+			fmt.Fprintf(os.Stderr, "%s %s\n",
+				color.RedString("Error:"), errstr)
 		}
 		os.Exit(2)
 	}

@@ -24,7 +24,7 @@ later on your secure system is identical.
   Go 1.22 (try `go version` to see if you have one already installed).
 
   If not, install the latest release of that version (e.g. 1.22.5,
-  using the official [Go installation instructions](https://golang.org/doc/install).
+  using the [official Go installation instructions](https://golang.org/doc/install).
 
 
 * Goreleaser - seedkit uses [goreleaser](https://goreleaser.com) to
@@ -56,23 +56,23 @@ later on your secure system is identical.
 * Then in a shell environment, do:
 
 ```bash
-        # Set VTAG and TAG variables for the seedkit release you want to reproduce
-        VTAG=v0.1.7
-        TAG=${VTAG#v}
+# Set VTAG and TAG variables for the seedkit release you want to reproduce
+VTAG=v0.1.7
+TAG=${VTAG#v}
 
-        # Clone the seedkit repository for that tag
-        git clone --depth 1 --branch $VTAG https://github.com/gavincarr/seedkit
-        # (ignore the warnings about being in `detached HEAD` state)
+# Clone the seedkit repository for that tag
+git clone --depth 1 --branch $VTAG https://github.com/gavincarr/seedkit
+# (ignore the warnings about being in `detached HEAD` state)
 
-        # Change to the seedkit directory
-        cd seedkit
+# Change to the seedkit directory
+cd seedkit
 
-        # Use goreleaser to do a local build
-        goreleaser --skip=publish,sign --clean
+# Use goreleaser to do a local build
+goreleaser --skip=publish,sign --clean
 
-        # Calculate the sha256 checksum of the Linux tarfiles
-        sha256sum dist/seedkit_Linux_x86_64.tar.gz
-        sha256sum dist/seedkit_Linux_arm64.tar.gz
+# Calculate the sha256 checksum of the Linux tarfiles
+sha256sum dist/seedkit_Linux_x86_64.tar.gz
+sha256sum dist/seedkit_Linux_arm64.tar.gz
 ```
 
 * Verify the checksums against the ones from the corresponding seedkit
