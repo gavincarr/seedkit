@@ -30,7 +30,7 @@ const (
 	tickGlyph  = "✔"
 )
 
-var GitTag = "undefined"
+var version = "undefined"
 
 var (
 	reGroup      = regexp.MustCompile(`^(\d{1,2})of(\d{1,2})$`)
@@ -448,7 +448,7 @@ func (cmd ParseCmd) Run(ctx *Context) error {
 }
 
 func (cmd VersionCmd) Run(ctx *Context) error {
-	fmt.Fprintf(ctx.writer, "seedkit version %s\n", GitTag)
+	fmt.Fprintf(ctx.writer, "seedkit version %s\n", version)
 	return nil
 }
 
