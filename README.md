@@ -61,6 +61,15 @@ To install on Tails, see the [Installing seedkit on tails](https://github.com/ga
 Usage
 -----
 
+Specific use cases are documented in more detail in the [recipes folder](https://github.com/gavincarr/seedkit/tree/main/recipes) e.g.
+
+- [Reproducing a seedkit build](https://github.com/gavincarr/seedkit/blob/main/recipes/reproducing_a_seedkit_build.md)
+- [Installing seedkit on tails](https://github.com/gavincarr/seedkit/blob/main/recipes/installing_seedkit_on_tails.md)
+- [Generating a BIP-39 mnemonic seed from words](https://github.com/gavincarr/seedkit/blob/main/recipes/generating_a_bip39_mnemonic_seed_from_words.md)
+- [Generating SLIP-39 shares from a BIP-39 seed](https://github.com/gavincarr/seedkit/blob/main/recipes/generating_slip39_shares_from_a_bip39_seed.md)
+
+General usage is as follows.
+
 ```bash
 # Seedkit top-level help
 seedkit -h
