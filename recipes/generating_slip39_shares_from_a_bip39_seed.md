@@ -78,9 +78,10 @@ cat slip39.txt | ~/Persistent/seedkit sl | less
 
 ## 5. Re-enter your SLIP-39 shares to check for transcription errors
 
-Ideally, to check for transcription errors, you should re-enter your
-transcribed words into a new shares file, one line per share, and then
-re-validated with seedkit:
+Ideally, to check for transcription errors, you should re-enter
+your transcribed words into a new shares file (either one share per
+line, space separated, or one word per line), and then re-validate
+with seedkit:
 
 ```bash
 nano slip39t.txt
@@ -98,4 +99,3 @@ corrected.
 Finally, store your SLIP-39 shares in separate secure locations.
 
 **NEVER** store a quorum of shares from the same group in the same location.
-
