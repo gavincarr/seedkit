@@ -30,6 +30,8 @@ const (
 	tickGlyph  = "✔"
 )
 
+var GitTag = "undefined"
+
 var (
 	reGroup      = regexp.MustCompile(`^(\d{1,2})of(\d{1,2})$`)
 	reWhitespace = regexp.MustCompile(`\s+`)
@@ -37,18 +39,19 @@ var (
 
 var cli struct {
 	Verbose      int             `flag type:"counter" short:"v" help:"Enable verbose mode"`
-	BipCheckword BipCheckwordCmd `cmd name:"bc" help:"generate one or more final checksum words for a BIP39 partial mnemonic"`
-	BipVal       BipValCmd       `cmd name:"bv" help:"validate a BIP39 mnemonic seed phrase"`
-	BipSlip      BipSlipCmd      `cmd name:"bs" help:"convert a BIP39 mnemonic seed to a set of SLIP39 shares"`
-	BipEntropy   BipEntropyCmd   `cmd name:"be" help:"convert a BIP39 mnemonic seed to a hex-encoded entropy string"`
-	SlipVal      SlipValCmd      `cmd name:"sv" help:"validate a full set of SLIP39 mnemonic shares"`
-	SlipBip      SlipBipCmd      `cmd name:"sb" help:"convert a minimal set of SLIP39 mnemonic shares to a BIP39 mnemonic seed"`
-	SlipLabel    SlipLabelCmd    `cmd name:"sl" help:"convert a full set of SLIP39 mnemonic shares to labelled word format"`
-	LabelSlip    LabelSlipCmd    `cmd name:"ls" help:"convert a labelled word set to a set of SLIP39 mnemonic shares"`
-	SlipEntropy  SlipEntropyCmd  `cmd name:"se" help:"convert the given SLIP39 shares to a hex-encoded entropy string"`
-	EntropyBip   EntropyBipCmd   `cmd name:"eb" help:"convert a hex-encoded entropy string to a BIP39 mnemonic seed"`
-	EntropySlip  EntropySlipCmd  `cmd name:"es" help:"convert a hex-encoded entropy string to a set of SLIP39 shares"`
-	//Parse ParseCmd `cmd help:"parse a SLIP39 share"`
+	BipCheckword BipCheckwordCmd `cmd name:"bc" help:"Generate one or more final checksum words for a BIP39 partial mnemonic"`
+	BipVal       BipValCmd       `cmd name:"bv" help:"Validate a BIP39 mnemonic seed phrase"`
+	BipSlip      BipSlipCmd      `cmd name:"bs" help:"Convert a BIP39 mnemonic seed to a set of SLIP39 shares"`
+	BipEntropy   BipEntropyCmd   `cmd name:"be" help:"Convert a BIP39 mnemonic seed to a hex-encoded entropy string"`
+	SlipVal      SlipValCmd      `cmd name:"sv" help:"Validate a full set of SLIP39 mnemonic shares"`
+	SlipBip      SlipBipCmd      `cmd name:"sb" help:"Convert a minimal set of SLIP39 mnemonic shares to a BIP39 mnemonic seed"`
+	SlipLabel    SlipLabelCmd    `cmd name:"sl" help:"Convert a full set of SLIP39 mnemonic shares to labelled word format"`
+	LabelSlip    LabelSlipCmd    `cmd name:"ls" help:"Convert a labelled word set to a set of SLIP39 mnemonic shares"`
+	SlipEntropy  SlipEntropyCmd  `cmd name:"se" help:"Convert the given SLIP39 shares to a hex-encoded entropy string"`
+	EntropyBip   EntropyBipCmd   `cmd name:"eb" help:"Convert a hex-encoded entropy string to a BIP39 mnemonic seed"`
+	EntropySlip  EntropySlipCmd  `cmd name:"es" help:"Convert a hex-encoded entropy string to a set of SLIP39 shares"`
+	//Parse ParseCmd `cmd help:"Parse a SLIP39 share"`
+	Version VersionCmd `cmd help:"Show version information"`
 }
 
 type Context struct {
@@ -117,6 +120,9 @@ type EntropySlipCmd struct {
 
 type ParseCmd struct {
 	Share []string `arg help:"SLIP39 share mnemonic" optional`
+}
+
+type VersionCmd struct {
 }
 
 func (cmd BipCheckwordCmd) Run(ctx *Context) error {
@@ -438,6 +444,11 @@ func (cmd ParseCmd) Run(ctx *Context) error {
 		return err
 	}
 	fmt.Fprintln(ctx.writer, string(data))
+	return nil
+}
+
+func (cmd VersionCmd) Run(ctx *Context) error {
+	fmt.Fprintf(ctx.writer, "seedkit version %s\n", GitTag)
 	return nil
 }
 
