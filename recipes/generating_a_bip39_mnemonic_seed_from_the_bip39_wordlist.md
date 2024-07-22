@@ -1,6 +1,6 @@
 
-Generating a BIP39 Mnemonic Seed Manually
-=========================================
+Generating a BIP39 Mnemonic Seed from the BIP39 Word List
+=========================================================
 
 This document assumes you are using an air-gapped live system like
 Tails, and that seedkit is installed in your `~/Persistent` folder
