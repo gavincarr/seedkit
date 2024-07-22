@@ -470,8 +470,38 @@ func readSeedMnemonic(ctx *Context, args []string) (string, error) {
 	return mnemonic, nil
 }
 
+// convertWordsToShares converts a slice of mnemonic words to a slice of SLIP39
+// share mnemonics
+func convertWordsToShares(words []string) ([]string, error) {
+	if len(words) == 0 {
+		return nil, errors.New("no SLIP39 mnemonic words provided")
+	}
+
+	mlen := 0
+	if len(words)%33 == 0 {
+		mlen = 33
+	} else if len(words)%20 == 0 {
+		mlen = 20
+	}
+
+	if mlen == 0 {
+		return nil,
+			fmt.Errorf("invalid SLIP39 word list length - %d is not a multiple of 33 or 20",
+				len(words))
+	}
+
+	mnemonics := make([]string, 0, len(words)/mlen)
+	for i := 0; i < len(words); i += mlen {
+		mnemonics = append(mnemonics, strings.Join(words[i:i+mlen], " "))
+	}
+
+	return mnemonics, nil
+}
+
 func readShareMnemonics(ctx *Context, args []string) ([]string, error) {
 	var mnemonics []string
+	var err error
+
 	// If we have args, but fewer than 20, assume they're quoted mnemonics
 	if len(args) > 0 && len(args) < 20 {
 		mnemonics = make([]string, 0, len(args))
@@ -483,7 +513,8 @@ func readShareMnemonics(ctx *Context, args []string) ([]string, error) {
 		mnemonics = []string{strings.Join(args, " ")}
 	}
 
-	// If we have no args, read mnemonics from ctx.reader/stdin, one per line
+	// If we have no args, read mnemonics from ctx.reader/stdin, one share
+	// per line, or possibly one word per line
 	reader := ctx.reader
 	if reader == nil {
 		reader = os.Stdin
@@ -495,7 +526,14 @@ func readShareMnemonics(ctx *Context, args []string) ([]string, error) {
 			mnemonics = append(mnemonics, m)
 		}
 		if err := scanner.Err(); err != nil {
-			return mnemonics, fmt.Errorf("scanning input: %w", err)
+			return nil, fmt.Errorf("scanning input: %w", err)
+		}
+	}
+	// If the first mnemonic contains no spaces, assume we have one word per line
+	if !strings.Contains(strings.TrimSpace(mnemonics[0]), " ") {
+		mnemonics, err = convertWordsToShares(mnemonics)
+		if err != nil {
+			return nil, err
 		}
 	}
 	//slog.Info("readShareMnemonics", "mnemonics", mnemonics)

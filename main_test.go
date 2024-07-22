@@ -305,7 +305,7 @@ func TestSlipVal_Success(t *testing.T) {
 
 	// Load all testdata `slipMs.txt` files (good shares)
 	tests := make(map[string]string)
-	testfiles, err := filepath.Glob("testdata/slip?s.txt")
+	testfiles, err := filepath.Glob("testdata/slip?s*.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -349,11 +349,14 @@ func TestSlipVal_Failure(t *testing.T) {
 
 	// Load all testdata `slipNf.txt` files (bad shares)
 	tests := make(map[string]string)
-	testfiles, err := filepath.Glob("testdata/slip?f.txt")
+	testfiles, err := filepath.Glob("testdata/slip?f*.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, tf := range testfiles {
+		if strings.Contains(tf, "todo") {
+			continue
+		}
 		data, err := ioutil.ReadFile(tf)
 		if err != nil {
 			t.Fatal(err)
