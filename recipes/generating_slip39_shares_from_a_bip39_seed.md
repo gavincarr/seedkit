@@ -58,7 +58,12 @@ mnemonic, of course).
 ## 4. Record your SLIP-39 shares
 
 Record your SLIP-39 shares either on paper, or on a durable medium like
-metal. It is recommended that you label each share with:
+metal. If you are recording on paper you might like to use the 33-word
+templates in the templates directory:
+[A4 version](https://github.com/gavincarr/seedkit/blob/main/templates/slip39_33x4_a4.pdf), 
+[Letter version](https://github.com/gavincarr/seedkit/blob/main/templates/slip39_33x4_letter.pdf).
+
+It is recommended that you label each share with:
 
 - wallet name
 - group number (if more than one group)
