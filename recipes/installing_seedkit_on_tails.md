@@ -79,7 +79,6 @@ keyring doesn't have a trust path to the key).
 d. Next, verify the checksums on your downloaded seedkit tarball(s):
 
 ```bash
-VERSION=0.2.2
 grep Linux_x86_64 seedkit_0.2.2_checksums.txt | sha256sum -c
 # and/or:
 grep Linux_arm64 seedkit_0.2.2_checksums.txt | sha256sum -c
@@ -106,7 +105,13 @@ ls ~/Persistent
 ## 4. Reboot tails and confirm seedkit is available
 
 Finally, reboot tails and verify that seedkit is available in your
-Persistent Storage folder afterwards. For security, **ONLY** use
-seedkit on Tails when the network is disconnected/offline (i.e. you are
-air-gapped).
+Persistent Storage folder:
+
+```bash
+# Open a terminal and check the seedkit version
+~/Persistent/seedkit version
+```
+
+For security, **ONLY** use seedkit on Tails when the network is
+disconnected/offline (i.e. you are air-gapped).
 
