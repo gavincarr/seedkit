@@ -89,8 +89,8 @@ line, space separated, or one word per line), and then re-validate
 with seedkit:
 
 ```bash
-nano slip39t.txt
-cat new_slip39t.txt | ~/Persistent/seedkit sv
+nano slip39_transcribed.txt
+cat slip39_transcribed.txt | ~/Persistent/seedkit sv
 ```
 
 As in Step 3, this should produce a success message if all shares are valid,

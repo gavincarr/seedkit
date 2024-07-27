@@ -28,16 +28,16 @@ file on your (air-gapped) tails machine using a text editor, with one word
 per line e.g.
 
 ```bash
-nano bip39p.txt
+nano bip39_partial.txt
 # Double-check you have exactly 23 words
-wc -l bip39p.txt
+wc -l bip39_partial.txt
 ```
 
 
 ## 3. Generate a 24th checksum word for your mnemonic seed
 
 ```bash
-cat bip39p.txt | ~/Persistent/seedkit bc | tee bip39.txt
+cat bip39_partial.txt | ~/Persistent/seedkit bc | tee bip39.txt
 ```
 
 
