@@ -83,20 +83,21 @@ cat slip39.txt | ~/Persistent/seedkit sl | less
 
 ## 5. Re-enter your SLIP-39 shares to check for transcription errors
 
-Ideally, to check for transcription errors, you should re-enter
+Next, to check for transcription errors, you should re-enter
 your transcribed words into a new shares file (either one share per
 line, space separated, or one word per line), and then re-validate
 with seedkit:
 
 ```bash
 nano slip39_transcribed.txt
-cat slip39_transcribed.txt | ~/Persistent/seedkit sv
+cat slip39_transcribed.txt | ~/Persistent/seedkit sv -c bip39.txt
 ```
 
-As in Step 3, this should produce a success message if all shares are valid,
-and output the original BIP-39 mnemonic. If you get an error it means that
-you have one or more transcription errors in your shares, which need to be
-corrected.
+This should produce a success message if all shares are valid and all
+combinations produced the mnemonic in "bip39.txt". If you get an error it
+means that you have one or more transcription errors in your shares,
+which need to be corrected (most importantly, on the version you have
+recorded on paper or metal).
 
 
 ## 6. Store your SLIP-39 shares securely
