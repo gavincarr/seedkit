@@ -400,12 +400,13 @@ func TestSlipLabel_Success(t *testing.T) {
 		tests[tf] = string(data)
 	}
 
-	reWords := regexp.MustCompile(`(?m)^\d{3,6} [a-z]+$`)
+	reWords := regexp.MustCompile(`(?m)^\d{3,6} [A-Z]+$`)
 	for tf, shares := range tests {
 		// Convert slip shares to labelled words
 		buf1 := bytes.NewBufferString(shares)
 		var buf2 bytes.Buffer
-		cmd := SlipLabelCmd{}
+		// Test with uppercase flag on
+		cmd := SlipLabelCmd{Upper: true}
 		ctx := Context{
 			reader: buf1,
 			writer: &buf2,

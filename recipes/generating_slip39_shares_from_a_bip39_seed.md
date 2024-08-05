@@ -78,6 +78,8 @@ you can run them through the `sl` command:
 
 ```bash
 cat slip39.txt | ~/Persistent/seedkit sl | less
+# Or in uppercase:
+cat slip39.txt | ~/Persistent/seedkit sl -u | less
 ```
 
 

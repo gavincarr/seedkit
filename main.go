@@ -95,6 +95,8 @@ type SlipBipCmd struct {
 }
 
 type SlipLabelCmd struct {
+	Upper bool `flag short:"u" help:"output words in uppercase"`
+
 	Shares []string `arg help:"minimal set of SLIP39 share mnemonics (repeated quoted args, or one per line on stdin)" optional`
 }
 
@@ -340,6 +342,10 @@ func (cmd SlipLabelCmd) Run(ctx *Context) error {
 		return fmt.Errorf("formatting labelled words: %w", err)
 	}
 
+	if cmd.Upper {
+		words = strings.ToUpper(words)
+	}
+
 	fmt.Fprint(ctx.writer, words)
 
 	return nil
@@ -355,7 +361,7 @@ func (cmd LabelSlipCmd) Run(ctx *Context) error {
 		return fmt.Errorf("reading stdin: %w", err)
 	}
 
-	shareGroups, err := slip39.CombineLabelledShares(string(data))
+	shareGroups, err := slip39.CombineLabelledShares(strings.ToLower(string(data)))
 	if err != nil {
 		return fmt.Errorf("combining labelled words: %w", err)
 	}
@@ -517,24 +523,24 @@ func readShareMnemonics(ctx *Context, args []string) ([]string, error) {
 	if len(args) > 0 && len(args) < 20 {
 		mnemonics = make([]string, 0, len(args))
 		for _, m := range args {
-			mnemonics = append(mnemonics, m)
+			mnemonics = append(mnemonics, strings.ToLower(m))
 		}
 	} else if len(args) >= 20 {
 		// Otherwise assume we have a single mnemonic with spaces
-		mnemonics = []string{strings.Join(args, " ")}
+		mnemonics = []string{strings.ToLower(strings.Join(args, " "))}
 	}
 
 	// If we have no args, read mnemonics from ctx.reader/stdin, one share
 	// per line, or possibly one word per line
-	reader := ctx.reader
-	if reader == nil {
-		reader = os.Stdin
-	}
 	if len(mnemonics) == 0 {
+		reader := ctx.reader
+		if reader == nil {
+			reader = os.Stdin
+		}
 		scanner := bufio.NewScanner(reader)
 		for scanner.Scan() {
 			m := strings.TrimSpace(scanner.Text())
-			mnemonics = append(mnemonics, m)
+			mnemonics = append(mnemonics, strings.ToLower(m))
 		}
 		if err := scanner.Err(); err != nil {
 			return nil, fmt.Errorf("scanning input: %w", err)
