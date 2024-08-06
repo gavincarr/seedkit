@@ -47,12 +47,11 @@ which checks that all quorum combinations of shares are valid, and produce
 the same BIP-39 mnemonic.
 
 ```bash
-cat slip39.txt | ~/Persistent/seedkit sv
+cat slip39.txt | ~/Persistent/seedkit sv -c bip39.txt
 ```
 
-This will produce a success message if all shares are valid, and output the
-BIP-39 mnemonic the shares generated (which should match your input BIP-39
-mnemonic, of course).
+This will produce a success message if all shares are valid and all
+combinations produced the mnemonic in "bip39.txt".
 
 
 ## 4. Record your SLIP-39 shares
