@@ -295,6 +295,57 @@ func TestBipSlip(t *testing.T) {
 	}
 }
 
+// Test converting BIP-39 seeds to labelled words
+func TestBipLabel_Success(t *testing.T) {
+	t.Parallel()
+
+	// Load all testdata `bipMs.txt` files (good seeds)
+	tests := make(map[string]string)
+	testfiles, err := filepath.Glob("testdata/bip?s.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tf := range testfiles {
+		data, err := ioutil.ReadFile(tf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tests[tf] = string(data)
+	}
+
+	reTestfile := regexp.MustCompile(`^testdata/bip`)
+	for tf, seeds := range tests {
+		lf := reTestfile.ReplaceAllString(tf, "testdata/blabels")
+		ldata, err := ioutil.ReadFile(lf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		//t.Logf("checking tf %q vs lf %q", tf, lf)
+
+		// Convert bip seeds to labelled words
+		buf1 := bytes.NewBufferString(seeds)
+		var buf2 bytes.Buffer
+		// Test with uppercase flag on
+		cmd := BipLabelCmd{Upper: true}
+		ctx := Context{
+			reader: buf1,
+			writer: &buf2,
+		}
+
+		err = cmd.Run(&ctx)
+		if err != nil {
+			t.Errorf("BipLabel error on %q: %s", tf, err.Error())
+			continue
+		}
+
+		words := buf2.String()
+		if words != string(ldata) {
+			t.Errorf("test file %q mismatch - got:\n%sexpected:\n%s",
+				tf, words, string(ldata))
+		}
+	}
+}
+
 // Test validation of good SLIP-39 shares
 func TestSlipVal_Success(t *testing.T) {
 	t.Parallel()

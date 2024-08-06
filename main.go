@@ -43,6 +43,7 @@ var cli struct {
 	BipVal       BipValCmd       `cmd name:"bv" help:"Validate a BIP39 mnemonic seed phrase"`
 	BipSlip      BipSlipCmd      `cmd name:"bs" help:"Convert a BIP39 mnemonic seed to a set of SLIP39 shares"`
 	BipEntropy   BipEntropyCmd   `cmd name:"be" help:"Convert a BIP39 mnemonic seed to a hex-encoded entropy string"`
+	BipLabel     BipLabelCmd     `cmd name:"bl" help:"Convert a full set of BIP39 mnemonic shares to labelled word format"`
 	SlipVal      SlipValCmd      `cmd name:"sv" help:"Validate a full set of SLIP39 mnemonic shares"`
 	SlipBip      SlipBipCmd      `cmd name:"sb" help:"Convert a minimal set of SLIP39 mnemonic shares to a BIP39 mnemonic seed"`
 	SlipLabel    SlipLabelCmd    `cmd name:"sl" help:"Convert a full set of SLIP39 mnemonic shares to labelled word format"`
@@ -77,6 +78,12 @@ type BipSlipCmd struct {
 	GroupThreshold int      `flag short:"t" aliases:"threshold" help:"Group threshold (the number of groups required to combine)" default:"1"`
 	Groups         []string `flag short:"g" help:"Group definitions, as \"MofN\" strings e.g. 1of1, 2of4, 3of5, etc. (repeatable)" required`
 	Passphrase     string   `flag short:"p" help:"passphrase to use for BIP39 seed and SLIP39 shares"`
+
+	Seed []string `arg help:"BIP39 mnemonic seed phrase" optional`
+}
+
+type BipLabelCmd struct {
+	Upper bool `flag short:"u" help:"output words in uppercase"`
 
 	Seed []string `arg help:"BIP39 mnemonic seed phrase" optional`
 }
@@ -238,6 +245,29 @@ func (cmd BipSlipCmd) Run(ctx *Context) error {
 	}
 
 	fmt.Fprint(ctx.writer, shareGroups.String())
+
+	return nil
+}
+
+func (cmd BipLabelCmd) Run(ctx *Context) error {
+	mnemonic, err := readSeedMnemonic(ctx, cmd.Seed)
+	if err != nil {
+		return err
+	}
+
+	words := strings.Fields(mnemonic)
+	if len(words) < 12 || len(words) > 24 || len(words)%3 != 0 {
+		return fmt.Errorf("invalid BIP39 mnemonic seed length %d (must be 12-24 words, multiple of 3)",
+			len(words))
+	}
+
+	for i := range len(words) {
+		word := words[i]
+		if cmd.Upper {
+			word = strings.ToUpper(word)
+		}
+		fmt.Fprintf(ctx.writer, "%02d %s\n", i+1, word)
+	}
 
 	return nil
 }
