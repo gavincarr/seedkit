@@ -9,7 +9,7 @@ Seedkit
 
 Seedkit is a command line tool for working with Bitcoin BIP-39 mnemonic seeds
 and SLIP-39 mnemonic shares. It is intended for use on an air-gapped live
-system (such as [Tails](https://tails.net) to securely generate and recover
+system (such as [Tails](https://tails.net)) to securely generate and recover
 reliable seed backups.
 
 Seedkit supports the following operations:

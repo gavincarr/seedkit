@@ -39,6 +39,7 @@ var (
 
 var cli struct {
 	Verbose      int             `flag type:"counter" short:"v" help:"Enable verbose mode"`
+	BipRandom    BipRandomCmd    `cmd name:"br" help:"Generate a random BIP39 mnemonic seed phrase (TESTING ONLY)" hidden:"yes"`
 	BipCheckword BipCheckwordCmd `cmd name:"bc" help:"Generate one or more final checksum words for a BIP39 partial mnemonic"`
 	BipVal       BipValCmd       `cmd name:"bv" help:"Validate a BIP39 mnemonic seed phrase"`
 	BipSlip      BipSlipCmd      `cmd name:"bs" help:"Convert a BIP39 mnemonic seed to a set of SLIP39 shares"`
@@ -59,6 +60,10 @@ type Context struct {
 	verbose int
 	reader  io.Reader
 	writer  io.Writer
+}
+
+type BipRandomCmd struct {
+	Num int `flag short:"n" help:"number of words in the mnemonic (12,15,18,21,24)" default:"24"`
 }
 
 type BipCheckwordCmd struct {
@@ -132,6 +137,27 @@ type ParseCmd struct {
 }
 
 type VersionCmd struct {
+}
+
+func (cmd BipRandomCmd) Run(ctx *Context) error {
+	if cmd.Num < 12 || cmd.Num > 24 || cmd.Num%3 != 0 {
+		return fmt.Errorf("invalid number of words %d: must be between 12 and 24, and divisible by 3", cmd.Num)
+	}
+
+	bitSize := cmd.Num / 3 * 32
+	entropy, err := bip39.NewEntropy(bitSize)
+	if err != nil {
+		return err
+	}
+
+	mnemonic, err := bip39.NewMnemonic(entropy)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintln(ctx.writer, mnemonic)
+
+	return nil
 }
 
 func (cmd BipCheckwordCmd) Run(ctx *Context) error {
