@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log/slog"
 	"math"
 	"math/big"
@@ -50,10 +49,10 @@ var cli struct {
 	SlipLabel    SlipLabelCmd    `cmd name:"sl" help:"Convert a full set of SLIP39 mnemonic shares to labelled word format"`
 	LabelSlip    LabelSlipCmd    `cmd name:"ls" help:"Convert a labelled word set to a set of SLIP39 mnemonic shares"`
 	SlipEntropy  SlipEntropyCmd  `cmd name:"se" help:"Convert the given SLIP39 shares to a hex-encoded entropy string"`
+	SlipParse    SlipParseCmd    `cmd name:"sp" help:"Parse one or more SLIP39 shares"`
 	EntropyBip   EntropyBipCmd   `cmd name:"eb" help:"Convert a hex-encoded entropy string to a BIP39 mnemonic seed"`
 	EntropySlip  EntropySlipCmd  `cmd name:"es" help:"Convert a hex-encoded entropy string to a set of SLIP39 shares"`
-	//Parse ParseCmd `cmd help:"Parse a SLIP39 share"`
-	Version VersionCmd `cmd help:"Show version information"`
+	Version      VersionCmd      `cmd help:"Show version information"`
 }
 
 type Context struct {
@@ -132,8 +131,8 @@ type EntropySlipCmd struct {
 	Groups  []string `arg help:"Group definitions, as \"MofN\" strings e.g. 2of4, 3of5, etc." required`
 }
 
-type ParseCmd struct {
-	Share []string `arg help:"SLIP39 share mnemonic" optional`
+type SlipParseCmd struct {
+	Shares []string `arg help:"SLIP39 share mnemonics (repeated quoted args, or one per line on stdin)" optional`
 }
 
 type VersionCmd struct {
@@ -330,12 +329,18 @@ func (cmd SlipValCmd) Run(ctx *Context) error {
 
 	// If cmd.CheckFile is supplied, it should contain the expected BIP39 mnemonic
 	if cmd.CheckFile != "" {
-		data, err := ioutil.ReadFile(cmd.CheckFile)
+		expectedMnemonic, err := readSeedMnemonicFromFile(ctx, cmd.CheckFile)
 		if err != nil {
 			return fmt.Errorf("reading check file: %w", err)
 		}
+		/*
+			data, err := os.ReadFile(cmd.CheckFile)
+			if err != nil {
+				return fmt.Errorf("reading check file: %w", err)
+			}
+			expectedMnemonic := strings.TrimSpace(string(data))
+		*/
 
-		expectedMnemonic := strings.TrimSpace(string(data))
 		if mnemonic != expectedMnemonic {
 			return fmt.Errorf("all SLIP-39 combinations agreed, but on an unexpected mnemonic (passphrase?):\ngot: %s\ncf:  %s",
 				mnemonic, expectedMnemonic)
@@ -428,6 +433,27 @@ func (cmd LabelSlipCmd) Run(ctx *Context) error {
 	return nil
 }
 
+func (cmd SlipParseCmd) Run(ctx *Context) error {
+	mnemonics, err := readShareMnemonics(ctx, cmd.Shares)
+	if err != nil {
+		return err
+	}
+
+	for _, mnemonic := range mnemonics {
+		s, err := slip39.ParseShare(mnemonic)
+		if err != nil {
+			return err
+		}
+		data, err := json.MarshalIndent(s, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(ctx.writer, string(data))
+	}
+
+	return nil
+}
+
 func (cmd BipEntropyCmd) Run(ctx *Context) error {
 	mnemonic, err := readSeedMnemonic(ctx, cmd.Seed)
 	if err != nil {
@@ -495,26 +521,22 @@ func (cmd EntropySlipCmd) Run(ctx *Context) error {
 	return nil
 }
 
-func (cmd ParseCmd) Run(ctx *Context) error {
-	mnemonic := strings.Join(cmd.Share, " ")
-	s, err := slip39.ParseShare(mnemonic)
-	if err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		return err
-	}
-	fmt.Fprintln(ctx.writer, string(data))
-	return nil
-}
-
 func (cmd VersionCmd) Run(ctx *Context) error {
 	fmt.Fprintf(ctx.writer, "seedkit version %s\n", version)
 	return nil
 }
 
-func readStdinSeedMnemonic(ctx *Context) (string, error) {
+func readSeedMnemonicFromFile(ctx *Context, filename string) (string, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return "", fmt.Errorf("reading file %q: %w", filename, err)
+	}
+	// Recombine the input into a single line with single spaces
+	mnemonic := reWhitespace.ReplaceAllString(strings.TrimSpace(string(data)), " ")
+	return mnemonic, nil
+}
+
+func readSeedMnemonicStdin(ctx *Context) (string, error) {
 	reader := ctx.reader
 	if reader == nil {
 		reader = os.Stdin
@@ -534,7 +556,7 @@ func readSeedMnemonic(ctx *Context, args []string) (string, error) {
 	if len(args) > 0 {
 		mnemonic = strings.Join(args, " ")
 	} else {
-		mnemonic, err = readStdinSeedMnemonic(ctx)
+		mnemonic, err = readSeedMnemonicStdin(ctx)
 		if err != nil {
 			return "", err
 		}

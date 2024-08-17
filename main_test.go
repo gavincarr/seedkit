@@ -354,7 +354,7 @@ func TestSlipVal_Success(t *testing.T) {
 	skipTests["testdata/slip5s.txt"] = true
 	skipTests["testdata/slip6s.txt"] = true
 
-	// Load all testdata `slipMs.txt` files (good shares)
+	// Load all testdata `slipMs*.txt` files (good shares)
 	tests := make(map[string]string)
 	testfiles, err := filepath.Glob("testdata/slip?s*.txt")
 	if err != nil {
@@ -390,6 +390,51 @@ func TestSlipVal_Success(t *testing.T) {
 		got := buf2.String()
 		if !strings.Contains(got, "good") {
 			t.Errorf("unexpected output on successful sv for %q: %s", tf, got)
+		}
+	}
+}
+
+// Test validation of good SLIP-39 shares with CheckFile
+func TestSlipVal_CheckFile(t *testing.T) {
+	t.Parallel()
+
+	var tests = []struct {
+		slipfile  string
+		checkfile string
+	}{
+		{"slip1s.txt", "bip1s.txt"},
+		{"slip1sn.txt", "bip1s.txt"},
+		{"slip1s.txt", "bip1sn.txt"},
+		{"slip1sn.txt", "bip1sn.txt"},
+	}
+
+	for _, tc := range tests {
+		data, err := ioutil.ReadFile("testdata/" + tc.slipfile)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		buf1 := bytes.NewBufferString(string(data))
+		var buf2 bytes.Buffer
+		cmd := SlipValCmd{
+			CheckFile: "testdata/" + tc.checkfile,
+		}
+		ctx := Context{
+			reader: buf1,
+			writer: &buf2,
+		}
+
+		err = cmd.Run(&ctx)
+		if err != nil {
+			t.Errorf("SlipVal error on %q / %q:\n%s",
+				tc.slipfile, tc.checkfile, err.Error())
+			continue
+		}
+
+		got := buf2.String()
+		if !strings.Contains(got, "good") {
+			t.Errorf("unexpected output on successful sv for %q / %q:\n%s",
+				tc.slipfile, tc.checkfile, got)
 		}
 	}
 }
