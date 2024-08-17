@@ -577,3 +577,46 @@ func TestSlipLabel_Failure(t *testing.T) {
 		t.Logf("LabelSlip on %q produced an error, as expected: %s", tf, err.Error())
 	}
 }
+
+// Test validation of good SLIP-39 shares with CheckFile
+func TestSlipParse(t *testing.T) {
+	t.Parallel()
+
+	var tests = []struct {
+		slipfile string
+		jsonfile string
+	}{
+		{"slip1s.txt", "slip1s.json"},
+		{"slip1sn.txt", "slip1s.json"},
+		{"slip1su.txt", "slip1s.json"},
+	}
+
+	for _, tc := range tests {
+		data, err := ioutil.ReadFile("testdata/" + tc.slipfile)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		buf1 := bytes.NewBufferString(string(data))
+		var buf2 bytes.Buffer
+		cmd := SlipParseCmd{}
+		ctx := Context{
+			reader: buf1,
+			writer: &buf2,
+		}
+
+		err = cmd.Run(&ctx)
+		if err != nil {
+			t.Errorf("SlipParse error on %q:\n%s", tc.slipfile, err.Error())
+			continue
+		}
+
+		data, err = ioutil.ReadFile("testdata/" + tc.jsonfile)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if diff := cmp.Diff(string(data), buf2.String()); diff != "" {
+			t.Errorf("record mismatch (-want +got):\n%s", diff)
+		}
+	}
+}

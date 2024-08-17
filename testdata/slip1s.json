@@ -1,0 +1,33 @@
+{
+  "identifier": 28398,
+  "extendable": 1,
+  "iteration_exponent": 1,
+  "group_threshold": 1,
+  "group_count": 1,
+  "group_index": 0,
+  "member_threshold": 3,
+  "member_index": 0,
+  "share_values": "Q4lKHKxEpshOznV+PSpF0ppxj3oBg2vaNpPbgllhNMo="
+}
+{
+  "identifier": 28398,
+  "extendable": 1,
+  "iteration_exponent": 1,
+  "group_threshold": 1,
+  "group_count": 1,
+  "group_index": 0,
+  "member_threshold": 3,
+  "member_index": 1,
+  "share_values": "EPyR5asz2DRIpJiJEiGLd1ZpnIvvolf6XvUtZtQJ2uw="
+}
+{
+  "identifier": 28398,
+  "extendable": 1,
+  "iteration_exponent": 1,
+  "group_threshold": 1,
+  "group_count": 1,
+  "group_index": 0,
+  "member_threshold": 3,
+  "member_index": 2,
+  "share_values": "/4E2Jz3pyfq4N/17lXqbz6/S6lNj8AxG//b30iKKHxs="
+}

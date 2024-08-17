@@ -48,8 +48,8 @@ var cli struct {
 	SlipBip      SlipBipCmd      `cmd name:"sb" help:"Convert a minimal set of SLIP39 mnemonic shares to a BIP39 mnemonic seed"`
 	SlipLabel    SlipLabelCmd    `cmd name:"sl" help:"Convert a full set of SLIP39 mnemonic shares to labelled word format"`
 	LabelSlip    LabelSlipCmd    `cmd name:"ls" help:"Convert a labelled word set to a set of SLIP39 mnemonic shares"`
-	SlipEntropy  SlipEntropyCmd  `cmd name:"se" help:"Convert the given SLIP39 shares to a hex-encoded entropy string"`
 	SlipParse    SlipParseCmd    `cmd name:"sp" help:"Parse one or more SLIP39 shares"`
+	SlipEntropy  SlipEntropyCmd  `cmd name:"se" help:"Convert the given SLIP39 shares to a hex-encoded entropy string"`
 	EntropyBip   EntropyBipCmd   `cmd name:"eb" help:"Convert a hex-encoded entropy string to a BIP39 mnemonic seed"`
 	EntropySlip  EntropySlipCmd  `cmd name:"es" help:"Convert a hex-encoded entropy string to a set of SLIP39 shares"`
 	Version      VersionCmd      `cmd help:"Show version information"`
