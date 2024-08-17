@@ -526,14 +526,18 @@ func (cmd VersionCmd) Run(ctx *Context) error {
 	return nil
 }
 
+func standardiseMnemonicBytes(b []byte) string {
+	mnemonic := strings.ToLower(strings.TrimSpace(string(b)))
+	return reWhitespace.ReplaceAllString(mnemonic, " ")
+}
+
 func readSeedMnemonicFromFile(ctx *Context, filename string) (string, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return "", fmt.Errorf("reading file %q: %w", filename, err)
 	}
 	// Recombine the input into a single line with single spaces
-	mnemonic := reWhitespace.ReplaceAllString(strings.TrimSpace(string(data)), " ")
-	return mnemonic, nil
+	return standardiseMnemonicBytes(data), nil
 }
 
 func readSeedMnemonicStdin(ctx *Context) (string, error) {
@@ -546,8 +550,7 @@ func readSeedMnemonicStdin(ctx *Context) (string, error) {
 		return "", fmt.Errorf("reading stdin: %w", err)
 	}
 	// Recombine the input into a single line with single spaces
-	mnemonic := reWhitespace.ReplaceAllString(strings.TrimSpace(string(data)), " ")
-	return mnemonic, nil
+	return standardiseMnemonicBytes(data), nil
 }
 
 func readSeedMnemonic(ctx *Context, args []string) (string, error) {

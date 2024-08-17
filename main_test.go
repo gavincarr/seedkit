@@ -142,7 +142,7 @@ func TestBipValidate_Success(t *testing.T) {
 
 	// Load all testdata `bipNs.txt` files (good mnemonics)
 	tests := make(map[string]string)
-	testfiles, err := filepath.Glob("testdata/bip?s.txt")
+	testfiles, err := filepath.Glob("testdata/bip?s*.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func TestBipValidate_Success(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		tests[tf] = string(data)
+		tests[tf] = standardiseMnemonicBytes(data)
 	}
 
 	for _, quiet := range []bool{true, false} {
@@ -235,7 +235,7 @@ func TestBipSlip(t *testing.T) {
 
 	// Load all testdata `bipNs.txt` files (good mnemonics)
 	tests := make(map[string]string)
-	testfiles, err := filepath.Glob("testdata/bip?s.txt")
+	testfiles, err := filepath.Glob("testdata/bip?s*.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,7 +244,7 @@ func TestBipSlip(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		tests[tf] = string(data)
+		tests[tf] = standardiseMnemonicBytes(data)
 	}
 
 	for _, passphrase := range []string{"", "TREZOR"} {
@@ -285,10 +285,10 @@ func TestBipSlip(t *testing.T) {
 				continue
 			}
 
-			got = buf.String()
+			got = standardiseMnemonicBytes(buf.Bytes())
 			//t.Logf("mnemonic %q converted back to BIP-39 seed:\n%s", tf, got)
 			if got != mnemonic {
-				t.Errorf("round-trip mismatch on %q - got:\n%sexpected:\n%s",
+				t.Errorf("round-trip mismatch on %q - got:\n%qexpected:\n%q",
 					tf, got, mnemonic)
 			}
 		}
@@ -301,7 +301,7 @@ func TestBipLabel_Success(t *testing.T) {
 
 	// Load all testdata `bipMs.txt` files (good seeds)
 	tests := make(map[string]string)
-	testfiles, err := filepath.Glob("testdata/bip?s.txt")
+	testfiles, err := filepath.Glob("testdata/bip?s*.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +310,7 @@ func TestBipLabel_Success(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		tests[tf] = string(data)
+		tests[tf] = standardiseMnemonicBytes(data)
 	}
 
 	reTestfile := regexp.MustCompile(`^testdata/bip`)
@@ -340,7 +340,7 @@ func TestBipLabel_Success(t *testing.T) {
 
 		words := buf2.String()
 		if words != string(ldata) {
-			t.Errorf("test file %q mismatch - got:\n%sexpected:\n%s",
+			t.Errorf("test file %q mismatch - got:\n%qexpected:\n%q",
 				tf, words, string(ldata))
 		}
 	}
