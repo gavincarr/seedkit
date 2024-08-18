@@ -41,8 +41,8 @@ Then, visit the seedkit releases page at:
 b. Download the seedkit Linux tarball for your architecture, as well
 as the checksums.txt and checksums.txt.sig files e.g.
 
-- seedkit_0.2.2_checksums.txt
-- seedkit_0.2.2_checksums.txt.sig
+- seedkit_0.3.1_checksums.txt
+- seedkit_0.3.1_checksums.txt.sig
 - seedkit_Linux_x86_64.tar.gz
 - seedkit_Linux_arm64.tar.gz
 
@@ -69,7 +69,7 @@ ls -l
 c. Verify the signature on the checksums.txt file:
 
 ```bash
-gpg --verify seedkit_0.2.2_checksums.txt.sig seedkit_0.2.2_checksums.txt
+gpg --verify seedkit_0.3.1_checksums.txt.sig seedkit_0.3.1_checksums.txt
 ```
 
 Check that the signature is good. A warning that the key is not certified
@@ -79,9 +79,9 @@ keyring doesn't have a trust path to the key).
 d. Next, verify the checksums on your downloaded seedkit tarball(s):
 
 ```bash
-grep Linux_x86_64 seedkit_0.2.2_checksums.txt | sha256sum -c
+grep Linux_x86_64 seedkit_0.3.1_checksums.txt | sha256sum -c
 # and/or:
-grep Linux_arm64 seedkit_0.2.2_checksums.txt | sha256sum -c
+grep Linux_arm64 seedkit_0.3.1_checksums.txt | sha256sum -c
 ```
 
 e. Now the tarball has been verified, extract the seedkit executable
